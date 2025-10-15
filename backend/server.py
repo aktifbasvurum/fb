@@ -455,6 +455,16 @@ async def approve_payment(request_id: str, admin: User = Depends(get_current_adm
     await db.users.update_one({"id": request['user_id']}, {"$inc": {"balance_tl": request['amount_tl']}})
     
     await log_activity(request['user_id'], request['user_email'], "payment_approved", f"Added {request['amount_tl']} TL")
+    
+    # Telegram notification
+    await send_telegram_notification(
+        f"<b>✅ ÖDEME ONAYLANDI</b>\\n\\n" +
+        f"Kullanıcı: {request['user_email']}\\n" +
+        f"Miktar: {request['amount_usdt']} USDT = {request['amount_tl']:.2f} TL\\n" +
+        f"Admin: {admin.email}\\n" +
+        f"Tarih: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}"
+    )
+    
     return {"message": "Payment approved"}
 
 @api_router.put("/admin/payment-requests/{request_id}/reject")
