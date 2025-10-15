@@ -293,13 +293,11 @@ async def download_account_txt(account_id: str, user: User = Depends(get_current
     
     cookie_data = account['account_data']['cookie_data']
     password = account['account_data'].get('password', 'Sifre yok')
-    email = account['account_data'].get('email', user.email)
     
     # Create TXT content
     txt_content = f"""FACEBOOK HESAP BILGILERI
 ========================
 
-Kullanici Adi / Email: {email}
 Sifre: {password}
 
 ========================
