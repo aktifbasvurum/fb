@@ -345,15 +345,30 @@ function AdminDashboard({ user, setUser }) {
                     <TableRow>
                       <TableHead>Email</TableHead>
                       <TableHead>Bakiye (TL)</TableHead>
-                      <TableHead>Kayıt Tarihi</TableHead>
+                      <TableHead>Hesap Sayisi</TableHead>
+                      <TableHead>Kayit Tarihi</TableHead>
+                      <TableHead>Islemler</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id} data-testid={`user-row-${user.id}`}>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>₺{user.balance_tl.toFixed(2)}</TableCell>
-                        <TableCell>{new Date(user.created_at).toLocaleDateString('tr-TR')}</TableCell>
+                    {users.map((usr) => (
+                      <TableRow key={usr.id}>
+                        <TableCell>{usr.email}</TableCell>
+                        <TableCell>{usr.balance_tl.toFixed(2)} TL</TableCell>
+                        <TableCell>{usr.purchase_count || 0}</TableCell>
+                        <TableCell>{new Date(usr.created_at).toLocaleDateString('tr-TR')}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setEditingUser(usr);
+                              setBalanceForm({ balance_tl: usr.balance_tl });
+                              setShowBalanceDialog(true);
+                            }}
+                          >
+                            Bakiye Duzenle
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
