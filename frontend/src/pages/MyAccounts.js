@@ -64,6 +64,14 @@ function MyAccounts({ user }) {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
+            align-items: center;
+          }
+          .nav-controls {
+            display: flex;
+            gap: 8px;
+            border-right: 2px solid #e5e7eb;
+            padding-right: 12px;
+            margin-right: 4px;
           }
           .btn {
             padding: 10px 20px;
@@ -73,6 +81,18 @@ function MyAccounts({ user }) {
             cursor: pointer;
             transition: all 0.2s;
             font-size: 14px;
+          }
+          .btn-nav {
+            padding: 8px 12px;
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 18px;
+            min-width: 40px;
+          }
+          .btn-nav:hover { background: #e5e7eb; }
+          .btn-nav:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed;
           }
           .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -114,11 +134,16 @@ function MyAccounts({ user }) {
       </head>
       <body>
         <div class="header">
-          <button class="btn btn-primary" onclick="window.location.href='https://www.facebook.com'">Facebook Ana Sayfa</button>
-          <button class="btn btn-secondary" onclick="window.location.href='https://business.facebook.com'">Business Manager</button>
-          <button class="btn btn-secondary" onclick="window.location.href='https://www.facebook.com/me'">Profil</button>
-          <button class="btn btn-secondary" onclick="window.location.href='https://adsmanager.facebook.com/adsmanager'">Ads Manager</button>
-          <button class="btn btn-secondary" onclick="window.location.href='https://www.facebook.com/settings?tab=payments'">Faturalandırma</button>
+          <div class="nav-controls">
+            <button class="btn btn-nav" onclick="window.history.back()" title="Geri">←</button>
+            <button class="btn btn-nav" onclick="window.history.forward()" title="İleri">→</button>
+            <button class="btn btn-nav" onclick="document.getElementById('contentFrame').contentWindow.location.reload()" title="Yenile">↻</button>
+          </div>
+          <button class="btn btn-primary" onclick="document.getElementById('contentFrame').src='https://www.facebook.com'">Facebook Ana Sayfa</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('contentFrame').src='https://business.facebook.com'">Business Manager</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('contentFrame').src='https://www.facebook.com/me'">Profil</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('contentFrame').src='https://adsmanager.facebook.com/adsmanager'">Ads Manager</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('contentFrame').src='https://www.facebook.com/settings?tab=payments'">Faturalandırma</button>
           <button class="btn btn-danger" onclick="window.close()">Kapat</button>
         </div>
         
@@ -130,7 +155,7 @@ function MyAccounts({ user }) {
           </p>
         </div>
         
-        <iframe src="https://www.facebook.com" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+        <iframe id="contentFrame" src="https://www.facebook.com" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
       </body>
       </html>
     `);
