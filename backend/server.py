@@ -513,8 +513,6 @@ async def download_account_json(account_id: str, user: User = Depends(get_curren
     }
     
     # Return as downloadable JSON file
-    from fastapi.responses import Response
-    
     headers = {
         'Content-Disposition': f'attachment; filename="FB_Account_{account_id[:8]}.json"',
         'Content-Type': 'application/json'
