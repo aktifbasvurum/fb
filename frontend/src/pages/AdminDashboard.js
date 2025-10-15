@@ -609,7 +609,6 @@ function AdminDashboard({ user, setUser }) {
           </form>
         </DialogContent>
       </Dialog>
-      </Dialog>
 
       {/* Balance Edit Dialog */}
       <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
