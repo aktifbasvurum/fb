@@ -136,8 +136,25 @@ function UserDashboard({ user, setUser }) {
                 <Card key={category.id} className="hover:shadow-xl transition-shadow">
                   <CardHeader>
                     <CardTitle>{category.name}</CardTitle>
-                    <p className="text-sm text-gray-500">{category.available_count} hesap mevcut</p>
-                    <p className="text-lg font-bold text-purple-600">{category.price_per_account} TL/hesap</p>
+                    {category.description && (
+                      <div className="mt-2 p-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg">
+                        <p className="text-white text-sm font-semibold text-center animate-pulse">
+                          {category.description}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-500 mt-2">{category.available_count} hesap mevcut</p>
+                    <div className="mt-2">
+                      {category.original_price > category.price_per_account && (
+                        <p className="text-sm text-gray-400 line-through">{category.original_price.toFixed(2)} TL</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <p className="text-2xl font-bold text-purple-600">{category.price_per_account} TL</p>
+                        {category.original_price > category.price_per_account && (
+                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">%20 İNDİRİM</span>
+                        )}
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Button onClick={() => { setSelectedCategory(category); setShowPurchaseDialog(true); }} className="w-full" disabled={category.available_count === 0}>
