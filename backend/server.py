@@ -356,115 +356,109 @@ async def download_account_launcher(account_id: str, user: User = Depends(get_cu
     # Get backend URL
     BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:3000')
     
-    # Create batch script
+    # Create batch script - NO TURKISH CHARACTERS, NO EMOJIS
     batch_content = f"""@echo off
-chcp 65001 >nul
-title Facebook Account Launcher - {profile_name}
+title Facebook Account Launcher
 color 0A
 
-echo ================================
+echo ==============================
 echo Facebook Account Launcher
-echo ================================
+echo ==============================
 echo.
 echo Profile: {profile_name}
 echo.
 
-REM Check if Python is installed
-echo [1/5] Python kontrolu...
+REM Check Python
+echo [1/5] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ HATA: Python bulunamadi!
+    echo ERROR: Python not found!
     echo.
-    echo Lutfen Python yukleyin: https://www.python.org/downloads/
-    echo Kurulum sirasinda "Add Python to PATH" secenegini isaretleyin
-    echo.
-    echo Kurulumdan sonra bilgisayari yeniden baslatin.
+    echo Install Python: https://www.python.org/downloads/
+    echo Check "Add Python to PATH" during installation
     echo.
     pause
     exit /b 1
 )
-echo    ✅ Python bulundu
+echo    OK - Python found
 
-REM Check if pip is working
-echo [2/5] Pip kontrolu...
+REM Check pip
+echo [2/5] Checking pip...
 python -m pip --version >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ HATA: Pip calısmiyor!
+    echo ERROR: Pip not working!
     echo.
     pause
     exit /b 1
 )
-echo    ✅ Pip hazir
+echo    OK - Pip ready
 
 REM Install/Check selenium
-echo [3/5] Selenium kontrolu...
+echo [3/5] Checking Selenium...
 python -c "import selenium" >nul 2>&1
 if errorlevel 1 (
-    echo    📦 Selenium yukleniyor (ilk seferde biraz surebilir)...
+    echo    Installing Selenium (please wait)...
     python -m pip install selenium --quiet
     if errorlevel 1 (
         echo.
-        echo ❌ HATA: Selenium yuklenemedi!
+        echo ERROR: Cannot install Selenium!
         echo.
-        echo Manuel yukleme icin CMD'de calistirin:
-        echo pip install selenium
+        echo Try manually: pip install selenium
         echo.
         pause
         exit /b 1
     )
-    echo    ✅ Selenium yuklendi
+    echo    OK - Selenium installed
 ) else (
-    echo    ✅ Selenium hazir
+    echo    OK - Selenium ready
 )
 
 REM Check Chrome
-echo [4/5] Chrome kontrolu...
+echo [4/5] Checking Chrome...
 reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ HATA: Google Chrome bulunamadi!
+    echo ERROR: Chrome not found!
     echo.
-    echo Lutfen Chrome yukleyin: https://www.google.com/chrome/
+    echo Install Chrome: https://www.google.com/chrome/
     echo.
     pause
     exit /b 1
 )
-echo    ✅ Chrome bulundu
+echo    OK - Chrome found
 
-REM Download Python launcher if needed
-echo [5/5] Launcher kontrolu...
-set "LAUNCHER_FILE=%~dp0fb_launcher.py"
+REM Download Python launcher
+echo [5/5] Checking launcher...
+set LAUNCHER_FILE=%~dp0fb_launcher.py
 if not exist "%LAUNCHER_FILE%" (
-    echo    📥 Python launcher indiriliyor...
-    powershell -NoProfile -Command "try {{ Invoke-WebRequest -Uri '{BACKEND_URL}/fb_launcher.py' -OutFile '%LAUNCHER_FILE%' -UseBasicParsing }} catch {{ exit 1 }}" >nul 2>&1
+    echo    Downloading launcher...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri '{BACKEND_URL}/fb_launcher.py' -OutFile '%LAUNCHER_FILE%' -UseBasicParsing" >nul 2>&1
     if errorlevel 1 (
         echo.
-        echo ❌ HATA: Launcher indirilemedi!
+        echo ERROR: Cannot download launcher!
         echo.
-        echo Elle indirin: {BACKEND_URL}/fb_launcher.py
-        echo Dosyayi su konuma kaydedin: %LAUNCHER_FILE%
+        echo Download manually: {BACKEND_URL}/fb_launcher.py
+        echo Save to: %LAUNCHER_FILE%
         echo.
         pause
         exit /b 1
     )
-    echo    ✅ Launcher indirildi
+    echo    OK - Launcher downloaded
 ) else (
-    echo    ✅ Launcher hazir
+    echo    OK - Launcher ready
 )
 
 echo.
-echo ================================
-echo 🚀 Facebook aciliyor...
-echo ================================
+echo ==============================
+echo Starting Facebook...
+echo ==============================
 echo.
 
 REM Create temp cookies file
-set "COOKIES_FILE=%TEMP%\\fb_cookies_{account_id}.json"
-(
-echo {cookie_data.replace('"', '""')}
-) > "%COOKIES_FILE%"
+set COOKIES_FILE=%TEMP%\\fb_cookies_{account_id}.json
+echo {cookie_data.replace('"', '""')} > "%COOKIES_FILE%"
 
 REM Run Python launcher
 python "%LAUNCHER_FILE%" "{profile_name}" "%COOKIES_FILE%"
@@ -477,14 +471,14 @@ if exist "%COOKIES_FILE%" del "%COOKIES_FILE%" >nul 2>&1
 
 if %EXITCODE% NEQ 0 (
     echo.
-    echo ❌ Bir hata olustu! Exit code: %EXITCODE%
+    echo ERROR: Process failed! Exit code: %EXITCODE%
     echo.
 )
 
 echo.
-echo ================================
-echo Program tamamlandi
-echo ================================
+echo ==============================
+echo Done
+echo ==============================
 pause
 exit /b %EXITCODE%
 """
