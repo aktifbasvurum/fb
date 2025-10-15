@@ -100,15 +100,25 @@ function AdminDashboard({ user, setUser }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API}/admin/categories`, { name: newCategory }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Kategori oluşturuldu!');
+      if (editingCategory) {
+        // Update existing category
+        await axios.put(`${API}/admin/categories/${editingCategory.id}`, { name: newCategory }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Kategori güncellendi!');
+      } else {
+        // Create new category
+        await axios.post(`${API}/admin/categories`, { name: newCategory }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Kategori oluşturuldu!');
+      }
       setShowCategoryDialog(false);
       setNewCategory('');
+      setEditingCategory(null);
       fetchData();
     } catch (error) {
-      toast.error('Kategori oluşturulamadı!');
+      toast.error(editingCategory ? 'Kategori güncellenemedi!' : 'Kategori oluşturulamadı!');
     }
   };
 
