@@ -503,7 +503,7 @@ async def create_category(input: CategoryInput, admin: User = Depends(get_curren
 
 @api_router.put("/admin/categories/{category_id}")
 async def update_category(category_id: str, input: CategoryInput, admin: User = Depends(get_current_admin)):
-    result = await db.categories.update_one({"id": category_id}, {"$set": {"name": input.name}})
+    result = await db.categories.update_one({"id": category_id}, {"$set": {"name": input.name, "description": input.description}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category updated"}
