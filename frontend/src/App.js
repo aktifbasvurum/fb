@@ -55,6 +55,12 @@ function App() {
             </ProtectedRoute>
           } />
           
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage user={user} />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/admin/login" element={<AdminLogin setUser={setUser} />} />
           
           <Route path="/admin/dashboard" element={
