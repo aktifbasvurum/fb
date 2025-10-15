@@ -353,6 +353,9 @@ async def download_account_launcher(account_id: str, user: User = Depends(get_cu
     # Generate unique profile name
     profile_name = f"FB_Account_{account_id[:8]}"
     
+    # Get backend URL
+    BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:3000')
+    
     # Create batch script
     batch_content = f"""@echo off
 chcp 65001 >nul
