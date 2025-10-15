@@ -129,8 +129,8 @@ function MyAccounts({ user }) {
                     )}
 
                     <div className="flex gap-2">
-                      <Button onClick={() => downloadJSON(account)} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                        <Download className="w-4 h-4 mr-2" />JSON Indir
+                      <Button onClick={() => downloadTXT(account)} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                        <Download className="w-4 h-4 mr-2" />TXT Indir
                       </Button>
                       <Button onClick={() => setDeleteAccountId(account.account_id)} variant="destructive" size="icon">
                         <Trash2 className="w-4 h-4" />
