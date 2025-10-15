@@ -147,7 +147,7 @@ function AdminDashboard({ user, setUser }) {
       });
       toast.success('Hesap eklendi!');
       setShowAccountDialog(false);
-      setNewAccount({ category_id: '', cookie_data: '', price_tl: '' });
+      setNewAccount({ category_id: '', cookie_data: '', password: '', price_tl: '' });
       fetchData();
     } catch (error) {
       toast.error('Hesap eklenemedi!');
