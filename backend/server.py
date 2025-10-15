@@ -341,6 +341,90 @@ async def get_my_accounts(user: User = Depends(get_current_user)):
     accounts = await db.purchased_accounts.find({"user_id": user.id}, {"_id": 0}).to_list(1000)
     return accounts
 
+@api_router.get("/accounts/{account_id}/download-launcher")
+async def download_account_launcher(account_id: str, user: User = Depends(get_current_user)):
+    # Find purchased account
+    account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    cookie_data = account['account_data']['cookie_data']
+    
+    # Generate unique profile name
+    profile_name = f"FB_Account_{account_id[:8]}"
+    
+    # Create batch script
+    batch_content = f"""@echo off
+chcp 65001 >nul
+title Facebook Account Launcher - {profile_name}
+
+echo ================================
+echo Facebook Account Launcher
+echo ================================
+echo.
+echo Profile: {profile_name}
+echo.
+
+REM Check if Python is installed
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ Python bulunamadı!
+    echo.
+    echo Lütfen Python yükleyin: https://www.python.org/downloads/
+    echo Kurulum sırasında "Add Python to PATH" seçeneğini işaretleyin
+    pause
+    exit /b 1
+)
+
+REM Check if selenium is installed
+python -c "import selenium" >nul 2>&1
+if errorlevel 1 (
+    echo 📦 Selenium yükleniyor...
+    pip install selenium >nul 2>&1
+    if errorlevel 1 (
+        echo ❌ Selenium yüklenemedi!
+        pause
+        exit /b 1
+    )
+    echo ✅ Selenium yüklendi!
+)
+
+REM Check if Chrome is installed
+reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" >nul 2>&1
+if errorlevel 1 (
+    echo ❌ Google Chrome bulunamadı!
+    echo Lütfen Google Chrome yükleyin: https://www.google.com/chrome/
+    pause
+    exit /b 1
+)
+
+echo.
+echo 🚀 Facebook hesabı açılıyor...
+echo.
+
+REM Create cookies file
+echo {cookie_data} > "%TEMP%\\fb_cookies_{account_id}.json"
+
+REM Run Python launcher
+python "%~dp0fb_launcher.py" "{profile_name}" @"%TEMP%\\fb_cookies_{account_id}.json"
+
+REM Cleanup
+del "%TEMP%\\fb_cookies_{account_id}.json" >nul 2>&1
+
+echo.
+pause
+"""
+    
+    # Return as downloadable file
+    from fastapi.responses import Response
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="Facebook_Account_{account_id[:8]}.bat"',
+        'Content-Type': 'application/x-bat'
+    }
+    
+    return Response(content=batch_content.encode('utf-8'), headers=headers)
+
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, user: User = Depends(get_current_user)):
     # Find purchased account
