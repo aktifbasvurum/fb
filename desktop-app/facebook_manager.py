@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Facebook Account Manager - Desktop Application
-Simple GUI to manage and open Facebook accounts with cookies
+PLATOON FACEBOOK MANAGER
+Desktop Application for Facebook Account Management
 """
 
 import tkinter as tk
@@ -11,416 +11,248 @@ import json
 import os
 import sys
 from pathlib import Path
-import webbrowser
+import subprocess
 
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
 
-class FacebookAccountManager:
+class PlatoonFacebookManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("Facebook Account Manager")
-        self.root.geometry("800x600")
+        self.root.title("PLATOON FACEBOOK MANAGER")
+        self.root.geometry("900x700")
         self.root.configure(bg='#667eea')
         
-        # Data
         self.accounts = []
-        self.accounts_dir = Path(os.getenv('LOCALAPPDATA')) / 'FacebookAccountManager'
+        self.accounts_dir = Path(os.getenv('LOCALAPPDATA') or os.getenv('APPDATA') or Path.home()) / 'PlatoonFacebookManager'
         self.accounts_dir.mkdir(exist_ok=True)
         self.accounts_file = self.accounts_dir / 'accounts.json'
         
-        # Load accounts
-        self.load_accounts()
+        # Check first run
+        self.first_run_file = self.accounts_dir / '.first_run'
+        if not self.first_run_file.exists():
+            self.show_welcome()
+            self.first_run_file.touch()
         
-        # Create UI
+        self.load_accounts()
         self.create_ui()
         
+        if not SELENIUM_AVAILABLE:
+            self.show_selenium_warning()
+    
+    def show_welcome(self):
+        """Show welcome message on first run"""
+        welcome_msg = """
+        PLATOON FACEBOOK MANAGER
+        
+        Bu program ucretsiz ve suresiz sekilde kullanabilirsiniz!
+        
+        Ozellikler:
+        - Sinirsiz hesap ekleme
+        - Otomatik cookie yukleme
+        - Ayri Chrome profilleri
+        - Hizli kisayollar (Ads Manager, Business, vb.)
+        - Sifre yonetimi
+        
+        Hemen baslayin!
+        """
+        messagebox.showinfo("Hosgeldiniz!", welcome_msg)
+    
     def create_ui(self):
         # Header
-        header_frame = tk.Frame(self.root, bg='#667eea', pady=20)
-        header_frame.pack(fill='x')
+        header = tk.Frame(self.root, bg='#667eea', pady=25)
+        header.pack(fill='x')
         
-        title_label = tk.Label(
-            header_frame,
-            text="Facebook Account Manager",
-            font=('Arial', 24, 'bold'),
-            bg='#667eea',
-            fg='white'
-        )
-        title_label.pack()
+        tk.Label(header, text="PLATOON", font=('Arial', 32, 'bold'), bg='#667eea', fg='white').pack()
+        tk.Label(header, text="FACEBOOK MANAGER", font=('Arial', 18), bg='#667eea', fg='#fbbf24').pack()
+        tk.Label(header, text="Ucretsiz & Suresiz", font=('Arial', 10), bg='#667eea', fg='white').pack(pady=(5,0))
         
-        subtitle_label = tk.Label(
-            header_frame,
-            text="Hesaplarınızı yönetin ve tek tıkla açın",
-            font=('Arial', 12),
-            bg='#667eea',
-            fg='white'
-        )
-        subtitle_label.pack()
+        # Content
+        content = tk.Frame(self.root, bg='white', padx=25, pady=25)
+        content.pack(fill='both', expand=True, padx=25, pady=(0, 25))
         
-        # Main content
-        content_frame = tk.Frame(self.root, bg='white', padx=20, pady=20)
-        content_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
-        
-        # Buttons frame
-        btn_frame = tk.Frame(content_frame, bg='white')
+        # Buttons
+        btn_frame = tk.Frame(content, bg='white')
         btn_frame.pack(fill='x', pady=(0, 20))
         
-        add_btn = tk.Button(
-            btn_frame,
-            text="➕ Hesap Ekle",
-            command=self.add_account,
-            bg='#10b981',
-            fg='white',
-            font=('Arial', 12, 'bold'),
-            padx=20,
-            pady=10,
-            relief='flat',
-            cursor='hand2'
-        )
-        add_btn.pack(side='left', padx=5)
+        tk.Button(btn_frame, text="+ Hesap Ekle", command=self.add_account, bg='#10b981', fg='white', font=('Arial', 12, 'bold'), padx=20, pady=12, relief='flat', cursor='hand2').pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Yenile", command=self.refresh, bg='#3b82f6', fg='white', font=('Arial', 12, 'bold'), padx=20, pady=12, relief='flat', cursor='hand2').pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Yardim", command=self.show_help, bg='#f59e0b', fg='white', font=('Arial', 12, 'bold'), padx=20, pady=12, relief='flat', cursor='hand2').pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Gereksinimler", command=self.install_requirements, bg='#8b5cf6', fg='white', font=('Arial', 12, 'bold'), padx=20, pady=12, relief='flat', cursor='hand2').pack(side='left', padx=5)
         
-        refresh_btn = tk.Button(
-            btn_frame,
-            text="🔄 Yenile",
-            command=self.refresh_accounts,
-            bg='#3b82f6',
-            fg='white',
-            font=('Arial', 12, 'bold'),
-            padx=20,
-            pady=10,
-            relief='flat',
-            cursor='hand2'
-        )
-        refresh_btn.pack(side='left', padx=5)
+        # List
+        tk.Label(content, text="Hesaplar:", font=('Arial', 14, 'bold'), bg='white', fg='#1f2937').pack(anchor='w', pady=(0, 10))
         
-        help_btn = tk.Button(
-            btn_frame,
-            text="❓ Yardım",
-            command=self.show_help,
-            bg='#f59e0b',
-            fg='white',
-            font=('Arial', 12, 'bold'),
-            padx=20,
-            pady=10,
-            relief='flat',
-            cursor='hand2'
-        )
-        help_btn.pack(side='left', padx=5)
-        
-        # Accounts list
-        list_label = tk.Label(
-            content_frame,
-            text="Hesaplarım:",
-            font=('Arial', 14, 'bold'),
-            bg='white',
-            fg='#1f2937'
-        )
-        list_label.pack(anchor='w', pady=(0, 10))
-        
-        # Scrollable frame
-        list_frame = tk.Frame(content_frame, bg='white')
+        list_frame = tk.Frame(content, bg='white')
         list_frame.pack(fill='both', expand=True)
         
         scrollbar = tk.Scrollbar(list_frame)
         scrollbar.pack(side='right', fill='y')
         
-        self.accounts_listbox = tk.Listbox(
-            list_frame,
-            font=('Arial', 11),
-            bg='#f9fafb',
-            fg='#1f2937',
-            selectbackground='#667eea',
-            selectforeground='white',
-            relief='flat',
-            highlightthickness=1,
-            highlightbackground='#e5e7eb',
-            yscrollcommand=scrollbar.set
-        )
-        self.accounts_listbox.pack(side='left', fill='both', expand=True)
-        scrollbar.config(command=self.accounts_listbox.yview)
+        self.listbox = tk.Listbox(list_frame, font=('Arial', 11), bg='#f9fafb', fg='#1f2937', selectbackground='#667eea', selectforeground='white', relief='flat', highlightthickness=1, highlightbackground='#e5e7eb', yscrollcommand=scrollbar.set)
+        self.listbox.pack(side='left', fill='both', expand=True)
+        scrollbar.config(command=self.listbox.yview)
         
-        # Action buttons
-        action_frame = tk.Frame(content_frame, bg='white')
+        # Actions
+        action_frame = tk.Frame(content, bg='white')
         action_frame.pack(fill='x', pady=(20, 0))
         
-        open_btn = tk.Button(
-            action_frame,
-            text="🚀 Hesabı Aç",
-            command=self.open_account,
-            bg='#667eea',
-            fg='white',
-            font=('Arial', 14, 'bold'),
-            padx=30,
-            pady=15,
-            relief='flat',
-            cursor='hand2'
-        )
-        open_btn.pack(side='left', padx=5, expand=True, fill='x')
+        tk.Button(action_frame, text="HESABI AC", command=self.open_account, bg='#667eea', fg='white', font=('Arial', 16, 'bold'), padx=40, pady=18, relief='flat', cursor='hand2').pack(side='left', padx=5, expand=True, fill='x')
+        tk.Button(action_frame, text="Sil", command=self.delete_account, bg='#ef4444', fg='white', font=('Arial', 16, 'bold'), padx=40, pady=18, relief='flat', cursor='hand2').pack(side='left', padx=5, expand=True, fill='x')
         
-        delete_btn = tk.Button(
-            action_frame,
-            text="🗑️ Sil",
-            command=self.delete_account,
-            bg='#ef4444',
-            fg='white',
-            font=('Arial', 14, 'bold'),
-            padx=30,
-            pady=15,
-            relief='flat',
-            cursor='hand2'
-        )
-        delete_btn.pack(side='left', padx=5, expand=True, fill='x')
-        
-        # Populate list
         self.refresh_list()
-        
-        # Check Selenium
-        if not SELENIUM_AVAILABLE:
-            self.show_selenium_warning()
     
     def load_accounts(self):
-        """Load accounts from JSON file"""
         if self.accounts_file.exists():
             try:
                 with open(self.accounts_file, 'r', encoding='utf-8') as f:
                     self.accounts = json.load(f)
-            except Exception as e:
-                messagebox.showerror("Hata", f"Hesaplar yüklenemedi: {e}")
+            except:
                 self.accounts = []
         else:
             self.accounts = []
     
     def save_accounts(self):
-        """Save accounts to JSON file"""
         try:
             with open(self.accounts_file, 'w', encoding='utf-8') as f:
                 json.dump(self.accounts, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            messagebox.showerror("Hata", f"Hesaplar kaydedilemedi: {e}")
+            messagebox.showerror("Hata", f"Kayit hatasi: {e}")
     
     def refresh_list(self):
-        """Refresh accounts listbox"""
-        self.accounts_listbox.delete(0, tk.END)
-        for i, account in enumerate(self.accounts):
-            display_text = f"{i+1}. {account.get('name', 'Hesap')} - {account.get('email', 'N/A')}"
-            self.accounts_listbox.insert(tk.END, display_text)
+        self.listbox.delete(0, tk.END)
+        for i, acc in enumerate(self.accounts):
+            pwd_text = f" | Sifre: {acc.get('password', 'N/A')}" if acc.get('password') else ""
+            text = f"{i+1}. {acc.get('name', 'Hesap')} - {acc.get('email', 'N/A')}{pwd_text}"
+            self.listbox.insert(tk.END, text)
     
     def add_account(self):
-        """Add new account"""
-        add_window = tk.Toplevel(self.root)
-        add_window.title("Hesap Ekle")
-        add_window.geometry("600x500")
-        add_window.configure(bg='white')
+        win = tk.Toplevel(self.root)
+        win.title("Hesap Ekle")
+        win.geometry("650x600")
+        win.configure(bg='white')
+        win.transient(self.root)
+        win.grab_set()
         
-        # Center window
-        add_window.transient(self.root)
-        add_window.grab_set()
+        tk.Label(win, text="Yeni Hesap Ekle", font=('Arial', 20, 'bold'), bg='white', fg='#1f2937').pack(pady=25)
         
-        # Title
-        title = tk.Label(
-            add_window,
-            text="Yeni Hesap Ekle",
-            font=('Arial', 18, 'bold'),
-            bg='white',
-            fg='#1f2937'
-        )
-        title.pack(pady=20)
+        tk.Label(win, text="Hesap Adi:", bg='white', font=('Arial', 11, 'bold')).pack(anchor='w', padx=35)
+        name_entry = tk.Entry(win, font=('Arial', 11), width=55)
+        name_entry.pack(padx=35, pady=(5, 15))
         
-        # Name
-        tk.Label(add_window, text="Hesap Adı:", bg='white', font=('Arial', 11)).pack(anchor='w', padx=30)
-        name_entry = tk.Entry(add_window, font=('Arial', 11), width=50)
-        name_entry.pack(padx=30, pady=(5, 15))
+        tk.Label(win, text="Email (opsiyonel):", bg='white', font=('Arial', 11, 'bold')).pack(anchor='w', padx=35)
+        email_entry = tk.Entry(win, font=('Arial', 11), width=55)
+        email_entry.pack(padx=35, pady=(5, 15))
         
-        # Email
-        tk.Label(add_window, text="Email (opsiyonel):", bg='white', font=('Arial', 11)).pack(anchor='w', padx=30)
-        email_entry = tk.Entry(add_window, font=('Arial', 11), width=50)
-        email_entry.pack(padx=30, pady=(5, 15))
+        tk.Label(win, text="Hesap Sifresi:", bg='white', font=('Arial', 11, 'bold')).pack(anchor='w', padx=35)
+        pwd_entry = tk.Entry(win, font=('Arial', 11), width=55, show='*')
+        pwd_entry.pack(padx=35, pady=(5, 15))
         
-        # Cookie file
-        tk.Label(add_window, text="Cookie Dosyası (JSON):", bg='white', font=('Arial', 11)).pack(anchor='w', padx=30)
+        tk.Label(win, text="Cookie Dosyasi (JSON):", bg='white', font=('Arial', 11, 'bold')).pack(anchor='w', padx=35)
         
-        cookie_frame = tk.Frame(add_window, bg='white')
-        cookie_frame.pack(padx=30, pady=(5, 15), fill='x')
+        cookie_frame = tk.Frame(win, bg='white')
+        cookie_frame.pack(padx=35, pady=(5, 15), fill='x')
         
-        cookie_path_var = tk.StringVar()
-        cookie_entry = tk.Entry(cookie_frame, textvariable=cookie_path_var, font=('Arial', 11), state='readonly')
-        cookie_entry.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        cookie_var = tk.StringVar()
+        tk.Entry(cookie_frame, textvariable=cookie_var, font=('Arial', 11), state='readonly').pack(side='left', fill='x', expand=True, padx=(0, 10))
         
-        def browse_cookie():
-            filename = filedialog.askopenfilename(
-                title="Cookie JSON Dosyası Seç",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
-            )
-            if filename:
-                cookie_path_var.set(filename)
+        def browse():
+            f = filedialog.askopenfilename(title="JSON Dosyasi Sec", filetypes=[("JSON", "*.json"), ("All", "*.*")])
+            if f:
+                cookie_var.set(f)
         
-        browse_btn = tk.Button(
-            cookie_frame,
-            text="Gözat",
-            command=browse_cookie,
-            bg='#3b82f6',
-            fg='white',
-            font=('Arial', 10, 'bold'),
-            padx=15,
-            pady=5,
-            relief='flat'
-        )
-        browse_btn.pack(side='left')
+        tk.Button(cookie_frame, text="Gozat", command=browse, bg='#3b82f6', fg='white', font=('Arial', 10, 'bold'), padx=15, pady=8, relief='flat').pack()
         
-        # Instructions
-        info_text = """
-VEYA web sitesinden indirdiğiniz hesap JSON dosyasını seçin.
-Cookie formatı: JSON array veya {"cookies": [...]}
-        """
-        info_label = tk.Label(
-            add_window,
-            text=info_text,
-            bg='#fef3c7',
-            fg='#78350f',
-            font=('Arial', 9),
-            justify='left',
-            padx=10,
-            pady=10
-        )
-        info_label.pack(padx=30, pady=10, fill='x')
+        tk.Label(win, text="Web sitesinden indirdiginiz JSON dosyasini secin", bg='#fef3c7', fg='#78350f', font=('Arial', 9), padx=10, pady=10).pack(padx=35, pady=10, fill='x')
         
-        # Buttons
-        btn_frame = tk.Frame(add_window, bg='white')
-        btn_frame.pack(pady=20)
+        btn_frame = tk.Frame(win, bg='white')
+        btn_frame.pack(pady=25)
         
         def save():
             name = name_entry.get().strip()
             email = email_entry.get().strip()
-            cookie_file = cookie_path_var.get()
+            pwd = pwd_entry.get().strip()
+            cf = cookie_var.get()
             
-            if not name:
-                messagebox.showwarning("Uyarı", "Lütfen hesap adı girin!")
+            if not name or not cf:
+                messagebox.showwarning("Uyari", "Hesap adi ve cookie dosyasi gerekli!")
                 return
             
-            if not cookie_file:
-                messagebox.showwarning("Uyarı", "Lütfen cookie dosyası seçin!")
-                return
-            
-            # Load cookies
             try:
-                with open(cookie_file, 'r', encoding='utf-8') as f:
+                with open(cf, 'r', encoding='utf-8') as f:
                     cookies_data = json.load(f)
                 
-                account = {
-                    'name': name,
-                    'email': email,
-                    'cookies': cookies_data
-                }
-                
-                self.accounts.append(account)
+                self.accounts.append({'name': name, 'email': email, 'password': pwd, 'cookies': cookies_data})
                 self.save_accounts()
                 self.refresh_list()
-                
-                messagebox.showinfo("Başarılı", "Hesap eklendi!")
-                add_window.destroy()
-                
+                messagebox.showinfo("Basarili", "Hesap eklendi!")
+                win.destroy()
             except Exception as e:
-                messagebox.showerror("Hata", f"Cookie dosyası okunamadı: {e}")
+                messagebox.showerror("Hata", f"Cookie okunamadi: {e}")
         
-        save_btn = tk.Button(
-            btn_frame,
-            text="Kaydet",
-            command=save,
-            bg='#10b981',
-            fg='white',
-            font=('Arial', 12, 'bold'),
-            padx=30,
-            pady=10,
-            relief='flat'
-        )
-        save_btn.pack(side='left', padx=5)
-        
-        cancel_btn = tk.Button(
-            btn_frame,
-            text="İptal",
-            command=add_window.destroy,
-            bg='#6b7280',
-            fg='white',
-            font=('Arial', 12, 'bold'),
-            padx=30,
-            pady=10,
-            relief='flat'
-        )
-        cancel_btn.pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Kaydet", command=save, bg='#10b981', fg='white', font=('Arial', 12, 'bold'), padx=35, pady=12, relief='flat').pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Iptal", command=win.destroy, bg='#6b7280', fg='white', font=('Arial', 12, 'bold'), padx=35, pady=12, relief='flat').pack(side='left', padx=5)
     
     def open_account(self):
-        """Open selected account"""
-        selection = self.accounts_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("Uyarı", "Lütfen bir hesap seçin!")
+        sel = self.listbox.curselection()
+        if not sel:
+            messagebox.showwarning("Uyari", "Lutfen hesap secin!")
             return
         
         if not SELENIUM_AVAILABLE:
-            messagebox.showerror(
-                "Hata",
-                "Selenium kurulu değil!\n\nKomut İstemini açın ve şunu çalıştırın:\npip install selenium"
-            )
+            messagebox.showerror("Hata", "Selenium kurulu degil!\\n\\nGereksinimler butonuna tiklayin.")
             return
         
-        idx = selection[0]
-        account = self.accounts[idx]
+        acc = self.accounts[sel[0]]
         
-        # Show loading
-        loading_window = tk.Toplevel(self.root)
-        loading_window.title("Yükleniyor...")
-        loading_window.geometry("300x150")
-        loading_window.configure(bg='white')
-        loading_window.transient(self.root)
+        loading = tk.Toplevel(self.root)
+        loading.title("Yukleniyor...")
+        loading.geometry("350x180")
+        loading.configure(bg='white')
+        loading.transient(self.root)
         
-        tk.Label(
-            loading_window,
-            text="Facebook açılıyor...",
-            font=('Arial', 14),
-            bg='white'
-        ).pack(pady=30)
+        tk.Label(loading, text="Facebook aciliyor...", font=('Arial', 14, 'bold'), bg='white').pack(pady=25)
+        tk.Label(loading, text=acc['name'], font=('Arial', 11), bg='white', fg='#6b7280').pack()
         
-        progress = ttk.Progressbar(loading_window, mode='indeterminate', length=200)
-        progress.pack(pady=10)
+        progress = ttk.Progressbar(loading, mode='indeterminate', length=250)
+        progress.pack(pady=15)
         progress.start()
         
-        loading_window.update()
+        loading.update()
         
-        # Open in separate thread to avoid freezing
         import threading
         
         def open_thread():
             try:
-                self.open_facebook_with_cookies(account)
-                loading_window.destroy()
-                messagebox.showinfo("Başarılı", "Facebook hesabı açıldı!")
+                self.open_with_selenium(acc)
+                loading.destroy()
+                messagebox.showinfo("Basarili", f"{acc['name']} acildi!\\n\\nKisayol toolbar sayfanin ustunde!")
             except Exception as e:
-                loading_window.destroy()
-                messagebox.showerror("Hata", f"Hesap açılamadı:\n{str(e)}")
+                loading.destroy()
+                messagebox.showerror("Hata", f"Acilamadi:\\n{str(e)}")
         
-        thread = threading.Thread(target=open_thread, daemon=True)
-        thread.start()
+        threading.Thread(target=open_thread, daemon=True).start()
     
-    def open_facebook_with_cookies(self, account):
-        """Open Facebook with cookies using Selenium"""
+    def open_with_selenium(self, account):
         import time
         
-        # Parse cookies
         cookies_data = account['cookies']
         if isinstance(cookies_data, dict) and 'cookies' in cookies_data:
             cookies = cookies_data['cookies']
         elif isinstance(cookies_data, list):
             cookies = cookies_data
         else:
-            raise ValueError("Invalid cookie format")
+            raise ValueError("Gecersiz cookie formati")
         
-        # Setup Chrome
         chrome_options = Options()
-        profile_name = account['name'].replace(' ', '_')
+        profile_name = account['name'].replace(' ', '_').replace('/', '_')
         profile_dir = self.accounts_dir / 'profiles' / profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
         
@@ -428,226 +260,167 @@ Cookie formatı: JSON array veya {"cookies": [...]}
         chrome_options.add_argument('--profile-directory=Default')
         chrome_options.add_argument('--no-first-run')
         chrome_options.add_argument('--no-default-browser-check')
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         
-        # Start Chrome
         driver = webdriver.Chrome(options=chrome_options)
         
         try:
-            # Go to Facebook
             driver.get('https://www.facebook.com')
             time.sleep(2)
             
-            # Clear cookies
             driver.delete_all_cookies()
             
-            # Add cookies
             for cookie in cookies:
                 try:
-                    cookie_dict = {
-                        'name': cookie.get('name', ''),
-                        'value': cookie.get('value', ''),
-                        'domain': cookie.get('domain', '.facebook.com'),
-                        'path': cookie.get('path', '/'),
-                    }
-                    
-                    if 'secure' in cookie:
-                        cookie_dict['secure'] = cookie['secure']
-                    if 'httpOnly' in cookie:
-                        cookie_dict['httpOnly'] = cookie['httpOnly']
-                    if 'expirationDate' in cookie:
-                        cookie_dict['expiry'] = int(float(cookie['expirationDate']))
-                    
-                    driver.add_cookie(cookie_dict)
+                    cd = {'name': cookie.get('name', ''), 'value': cookie.get('value', ''), 'domain': cookie.get('domain', '.facebook.com'), 'path': cookie.get('path', '/')}\n                    if 'secure' in cookie: cd['secure'] = cookie['secure']\n                    if 'httpOnly' in cookie: cd['httpOnly'] = cookie['httpOnly']\n                    if 'expirationDate' in cookie: cd['expiry'] = int(float(cookie['expirationDate']))\n                    driver.add_cookie(cd)
+                except:\n                    pass\n            \n            driver.refresh()\n            time.sleep(3)\n            \n            # Auto login if password is provided
+            password = account.get('password', '')
+            if password:
+                try:
+                    # Check if login form is present
+                    pwd_field = driver.find_elements(By.NAME, 'pass')
+                    if pwd_field:
+                        pwd_field[0].send_keys(password)
+                        login_btn = driver.find_elements(By.NAME, 'login')
+                        if login_btn:
+                            login_btn[0].click()
+                            time.sleep(3)
                 except:
-                    pass
+                    pass  # Already logged in or no login form
             
-            # Refresh
-            driver.refresh()
-            time.sleep(2)
-            
-            # Create shortcut buttons overlay
-            self.add_shortcut_toolbar(driver)
+            # Add toolbar
+            toolbar_js = '''
+var toolbar = document.createElement('div');
+toolbar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:12px;display:flex;gap:6px;z-index:999999;box-shadow:0 4px 12px rgba(0,0,0,0.3);flex-wrap:wrap;';
+
+var btns = [
+    ['Facebook', 'https://www.facebook.com'],
+    ['Business Manager', 'https://business.facebook.com'],
+    ['Ads Manager', 'https://adsmanager.facebook.com/adsmanager'],
+    ['Reklam Olustur', 'https://www.facebook.com/ads/create'],
+    ['Kampanyalar', 'https://www.facebook.com/ads/manager/campaigns'],
+    ['Sayfa Yonetimi', 'https://www.facebook.com/pages'],
+    ['Faturalandirma', 'https://www.facebook.com/settings?tab=payments'],
+    ['Odeme Yontemleri', 'https://www.facebook.com/ads/manager/account_settings/account_billing/'],
+    ['Hesap Ayarlari', 'https://www.facebook.com/settings'},
+    ['Reklam Hesabi', 'https://www.facebook.com/ads/manager/account_settings/account_info/'],
+    ['Profil', 'https://www.facebook.com/me']
+];
+
+btns.forEach(function(b){
+    var btn = document.createElement('button');
+    btn.textContent = b[0];
+    btn.style.cssText = 'background:#fff;color:#667eea;border:none;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;font-size:11px;transition:all 0.2s;';
+    btn.onmouseover = function(){ this.style.background='#f3f4f6'; this.style.transform='translateY(-2px)'; };
+    btn.onmouseout = function(){ this.style.background='#fff'; this.style.transform='translateY(0)'; };
+    btn.onclick = function(){ window.location.href = b[1]; };
+    toolbar.appendChild(btn);
+});
+
+var close = document.createElement('button');
+close.textContent = 'X';
+close.style.cssText = 'background:#ef4444;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;margin-left:auto;';
+close.onclick = function(){ toolbar.remove(); document.body.style.paddingTop='0'; };
+toolbar.appendChild(close);
+
+document.body.insertBefore(toolbar, document.body.firstChild);
+document.body.style.paddingTop = '65px';
+'''
+            driver.execute_script(toolbar_js)
             
         except Exception as e:
             driver.quit()
             raise e
     
-    def add_shortcut_toolbar(self, driver):
-        """Add shortcut toolbar to browser"""
-        toolbar_script = \"\"\"
-        // Create toolbar
-        var toolbar = document.createElement('div');
-        toolbar.id = 'fb-shortcuts-toolbar';
-        toolbar.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 10px;
-            display: flex;
-            gap: 8px;
-            z-index: 999999;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            flex-wrap: wrap;
-        `;
-        
-        var buttons = [
-            {text: 'Facebook Ana Sayfa', url: 'https://www.facebook.com'},
-            {text: 'Business Manager', url: 'https://business.facebook.com'},
-            {text: 'Ads Manager', url: 'https://adsmanager.facebook.com/adsmanager'},
-            {text: 'Reklam Olustur', url: 'https://www.facebook.com/ads/create'},
-            {text: 'Sayfa Yonetimi', url: 'https://www.facebook.com/pages'},
-            {text: 'Faturalandirma', url: 'https://www.facebook.com/settings?tab=payments'},
-            {text: 'Odeme Yontemleri', url: 'https://www.facebook.com/ads/manager/account_settings/account_billing/'},
-            {text: 'Hesap Ayarlari', url: 'https://www.facebook.com/settings'},
-            {text: 'Profil', url: 'https://www.facebook.com/me'},
-        ];
-        
-        buttons.forEach(function(btn) {
-            var button = document.createElement('button');
-            button.textContent = btn.text;
-            button.style.cssText = `
-                background: white;
-                color: #667eea;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 12px;
-                transition: all 0.2s;
-            `;
-            button.onmouseover = function() {
-                this.style.background = '#f3f4f6';
-                this.style.transform = 'translateY(-2px)';
-            };
-            button.onmouseout = function() {
-                this.style.background = 'white';
-                this.style.transform = 'translateY(0)';
-            };
-            button.onclick = function() {
-                window.location.href = btn.url;
-            };
-            toolbar.appendChild(button);
-        });
-        
-        // Add close button
-        var closeBtn = document.createElement('button');
-        closeBtn.textContent = 'X Kapat Toolbar';
-        closeBtn.style.cssText = `
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: auto;
-        `;
-        closeBtn.onclick = function() {
-            toolbar.remove();
-        };
-        toolbar.appendChild(closeBtn);
-        
-        document.body.insertBefore(toolbar, document.body.firstChild);
-        document.body.style.paddingTop = '60px';
-        \"\"\"
-        
-        try:
-            driver.execute_script(toolbar_script)
-        except:
-            pass  # If script injection fails, continue without toolbar
-    
     def delete_account(self):
-        """Delete selected account"""
-        selection = self.accounts_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("Uyarı", "Lütfen bir hesap seçin!")
+        sel = self.listbox.curselection()
+        if not sel:
+            messagebox.showwarning("Uyari", "Lutfen hesap secin!")
             return
         
-        idx = selection[0]
-        account = self.accounts[idx]
-        
-        result = messagebox.askyesno(
-            "Onay",
-            f"{account['name']} hesabını silmek istediğinize emin misiniz?"
-        )
-        
-        if result:
-            self.accounts.pop(idx)
+        if messagebox.askyesno("Onay", f"{self.accounts[sel[0]]['name']} silinsin mi?"):
+            self.accounts.pop(sel[0])
             self.save_accounts()
             self.refresh_list()
-            messagebox.showinfo("Başarılı", "Hesap silindi!")
+            messagebox.showinfo("Basarili", "Hesap silindi!")
     
-    def refresh_accounts(self):
-        """Refresh accounts list"""
+    def refresh(self):
         self.load_accounts()
         self.refresh_list()
-        messagebox.showinfo("Bilgi", "Hesaplar yenilendi!")
+        messagebox.showinfo("Bilgi", "Yenilendi!")
+    
+    def install_requirements(self):
+        """Install Python requirements"""
+        msg = messagebox.askyesno(
+            "Gereksinimler",
+            "Selenium kurulacak. Devam edilsin mi?\\n\\nInternet baglantisi gereklidir."
+        )
+        
+        if msg:
+            loading = tk.Toplevel(self.root)
+            loading.title("Yukleniyor...")
+            loading.geometry("400x200")
+            loading.configure(bg='white')
+            loading.transient(self.root)
+            
+            tk.Label(loading, text="Selenium yukleniyor...", font=('Arial', 14), bg='white').pack(pady=30)
+            
+            progress = ttk.Progressbar(loading, mode='indeterminate', length=300)
+            progress.pack(pady=10)
+            progress.start()
+            
+            loading.update()
+            
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'selenium', '--quiet'])
+                loading.destroy()
+                messagebox.showinfo("Basarili", "Selenium yuklendi!\\n\\nProgrami yeniden baslatin.")
+                self.root.quit()
+            except Exception as e:
+                loading.destroy()
+                messagebox.showerror("Hata", f"Yuklenemedi:\\n{e}")
     
     def show_help(self):
-        """Show help dialog"""
         help_text = """
-FACEBOOK ACCOUNT MANAGER - YARDIM
+PLATOON FACEBOOK MANAGER - YARDIM
 
-1. HESAP EKLEME:
-   - "Hesap Ekle" butonuna tıklayın
-   - Hesap adı girin
-   - Web sitesinden indirdiğiniz JSON dosyasını seçin
-   - Kaydet
+KULLANIM:
+1. Web sitesinden JSON dosyasi indirin
+2. \"Hesap Ekle\" ile hesap ekleyin
+3. \"HESABI AC\" ile Facebook'u acin
+4. Tarayicidaki kisayol butonlari ile yonetin!
 
-2. HESAP AÇMA:
-   - Listeden hesap seçin
-   - "Hesabı Aç" butonuna tıklayın
-   - Facebook otomatik açılır!
+KISAYOLLAR:
+- Business Manager
+- Ads Manager
+- Reklam Olustur
+- Kampanyalar
+- Faturalandirma
+- Odeme Yontemleri
+- ve daha fazlasi!
 
-3. HESAP SİLME:
-   - Listeden hesap seçin
-   - "Sil" butonuna tıklayın
-
-GEREKLİLİKLER:
+GEREKSINIMLER:
 - Python 3.x
-- Selenium: pip install selenium
+- Selenium (Gereksinimler butonundan yukleyin)
 - Google Chrome
 
-SORUN GİDERME:
-- Selenium hatası: pip install selenium
-- Chrome hatası: Chrome yükleyin
+DESTEK:
+Web sitesi uzerinden destek alin.
         """
         
-        help_window = tk.Toplevel(self.root)
-        help_window.title("Yardım")
-        help_window.geometry("600x500")
-        help_window.configure(bg='white')
+        hw = tk.Toplevel(self.root)
+        hw.title("Yardim")
+        hw.geometry("650x550")
+        hw.configure(bg='white')
         
-        text_widget = tk.Text(
-            help_window,
-            wrap='word',
-            font=('Arial', 10),
-            padx=20,
-            pady=20,
-            bg='#f9fafb'
-        )
-        text_widget.pack(fill='both', expand=True)
-        text_widget.insert('1.0', help_text)
-        text_widget.config(state='disabled')
-    
-    def show_selenium_warning(self):
-        """Show warning if Selenium is not installed"""
-        messagebox.showwarning(
-            "Uyarı",
-            "Selenium kurulu değil!\n\n" +
-            "Hesapları açmak için Selenium gereklidir.\n\n" +
-            "Komut İstemini açın ve şunu çalıştırın:\n" +
-            "pip install selenium\n\n" +
-            "Sonra programı yeniden başlatın."
-        )
+        text = tk.Text(hw, wrap='word', font=('Arial', 10), padx=20, pady=20, bg='#f9fafb')
+        text.pack(fill='both', expand=True)
+        text.insert('1.0', help_text)
+        text.config(state='disabled')
 
 def main():
     root = tk.Tk()
-    app = FacebookAccountManager(root)
+    app = PlatoonFacebookManager(root)
     root.mainloop()
 
 if __name__ == '__main__':
