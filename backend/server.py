@@ -456,6 +456,16 @@ async def create_category(input: CategoryInput, admin: User = Depends(get_curren
     await db.categories.insert_one(doc)
     return category
 
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(category_id: str, input: CategoryInput, admin: User = Depends(get_current_admin)):
+    result = await db.categories.update_one(
+        {"id": category_id},
+        {"$set": {"name": input.name}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category updated"}
+
 @api_router.delete("/admin/categories/{category_id}")
 async def delete_category(category_id: str, admin: User = Depends(get_current_admin)):
     await db.categories.delete_one({"id": category_id})
