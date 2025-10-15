@@ -317,6 +317,9 @@ async def purchase_accounts(input: PurchaseInput, user: User = Depends(get_curre
     
     await db.users.update_one({"id": user.id}, {"$set": {"balance_tl": user.balance_tl - total_price}})
     
+    category = await db.categories.find_one({"id": input.category_id}, {"_id": 0})
+    category_name = category['name'] if category else 'Unknown'
+    
     for account in accounts:
         await db.accounts.update_one({"id": account['id']}, {"$set": {"status": "sold"}})
         purchased_account = PurchasedAccount(user_id=user.id, account_id=account['id'], account_data=account)
@@ -325,6 +328,18 @@ async def purchase_accounts(input: PurchaseInput, user: User = Depends(get_curre
         await db.purchased_accounts.insert_one(doc)
     
     await log_activity(user.id, user.email, "purchase", f"Purchased {input.quantity} accounts for {total_price} TL")
+    
+    # Telegram notification
+    await send_telegram_notification(
+        f"<b>🛒 YENİ SATIN ALMA</b>\\n\\n" +
+        f"Kullanıcı: {user.email}\\n" +
+        f"Kategori: {category_name}\\n" +
+        f"Adet: {input.quantity} hesap\\n" +
+        f"Tutar: {total_price:.2f} TL\\n" +
+        f"Yeni Bakiye: {(user.balance_tl - total_price):.2f} TL\\n" +
+        f"Tarih: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}"
+    )
+    
     return {"message": f"Successfully purchased {input.quantity} accounts", "total_paid": total_price, "new_balance": user.balance_tl - total_price}
 
 @api_router.get("/accounts/my-accounts")
