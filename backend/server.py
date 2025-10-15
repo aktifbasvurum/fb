@@ -285,25 +285,39 @@ async def get_my_accounts(user: User = Depends(get_current_user)):
     accounts = await db.purchased_accounts.find({"user_id": user.id}, {"_id": 0}).to_list(1000)
     return accounts
 
-@api_router.get("/accounts/{account_id}/download-json")
-async def download_account_json(account_id: str, user: User = Depends(get_current_user)):
+@api_router.get("/accounts/{account_id}/download-txt")
+async def download_account_txt(account_id: str, user: User = Depends(get_current_user)):
     account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
     cookie_data = account['account_data']['cookie_data']
-    password = account['account_data'].get('password', '')
+    password = account['account_data'].get('password', 'Sifre yok')
+    email = account['account_data'].get('email', user.email)
     
-    json_data = {
-        "name": f"Facebook Account {account_id[:8]}",
-        "email": user.email,
-        "account_id": account_id,
-        "password": password,
-        "cookies": json.loads(cookie_data) if isinstance(cookie_data, str) else cookie_data
+    # Create TXT content
+    txt_content = f"""FACEBOOK HESAP BILGILERI
+========================
+
+Kullanici Adi / Email: {email}
+Sifre: {password}
+
+========================
+COOKIE VERILERI:
+========================
+
+{cookie_data}
+
+========================
+NOT: Bu cookie verilerini tarayiciniza yukleyerek hesaba giris yapabilirsiniz.
+"""
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="FB_Hesap_{account_id[:8]}.txt"',
+        'Content-Type': 'text/plain; charset=utf-8'
     }
     
-    headers = {'Content-Disposition': f'attachment; filename="FB_Account_{account_id[:8]}.json"', 'Content-Type': 'application/json'}
-    return Response(content=json.dumps(json_data, indent=2).encode('utf-8'), headers=headers)
+    return Response(content=txt_content.encode('utf-8'), headers=headers)
 
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, user: User = Depends(get_current_user)):
