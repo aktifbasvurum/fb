@@ -363,11 +363,11 @@ async def admin_login(input: AdminLoginInput):
         raise HTTPException(status_code=401, detail="Invalid admin credentials")
     
     # Create admin user if not exists
-    admin_user = await db.users.find_one({"email": "admin@system.local"}, {"_id": 0})
+    admin_user = await db.users.find_one({"email": "admin@platform.com"}, {"_id": 0})
     if not admin_user:
         admin = User(
             id="admin-" + str(uuid.uuid4()),
-            email="admin@system.local",
+            email="admin@platform.com",
             password_hash=hash_password(admin_password),
             role="admin"
         )
