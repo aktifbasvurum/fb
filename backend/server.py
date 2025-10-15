@@ -114,6 +114,7 @@ class PurchaseInput(BaseModel):
 
 class CategoryInput(BaseModel):
     name: str
+    description: str = ""
 
 class AccountInput(BaseModel):
     category_id: str
