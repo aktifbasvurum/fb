@@ -15,9 +15,21 @@ function MyAccounts({ user }) {
   const [accounts, setAccounts] = useState([]);
   const [deleteAccountId, setDeleteAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showExtensionInfo, setShowExtensionInfo] = useState(false);
+  const [extensionInstalled, setExtensionInstalled] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
+    
+    // Check if extension is installed
+    setTimeout(() => {
+      if (window.FB_COOKIE_LOADER_INSTALLED) {
+        setExtensionInstalled(true);
+        toast.success('🎉 Extension aktif! Otomatik cookie yükleme hazır!');
+      } else {
+        setShowExtensionInfo(true);
+      }
+    }, 1000);
     
     // Listen for extension messages
     window.addEventListener('message', handleExtensionMessage);
