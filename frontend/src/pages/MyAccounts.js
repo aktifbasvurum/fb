@@ -381,12 +381,24 @@ setTimeout(function(){goTo('https://www.facebook.com')},500);
                   
                   <Button
                     onClick={() => openAccountInNewWindow(account)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white"
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white mb-2"
                     data-testid={`open-account-button-${account.id}`}
                   >
                     <ExternalLink className="mr-2 w-4 h-4" />
-                    Hesabı Aç
+                    Hesabı Tarayıcıda Aç
                   </Button>
+                  
+                  <Button
+                    onClick={() => downloadLauncher(account)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    data-testid={`download-launcher-${account.id}`}
+                  >
+                    📥 Launcher İndir (.bat)
+                  </Button>
+                  
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    .bat dosyası: Otomatik Chrome profili + Cookie yükleme
+                  </p>
                 </CardContent>
               </Card>
             ))}
