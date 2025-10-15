@@ -216,10 +216,7 @@ function AdminDashboard({ user, setUser }) {
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setShowWalletDialog(true)} variant="outline" className="border-white text-white hover:bg-white/10">
-              <Settings className="mr-2 w-4 h-4" />Cuzdan
-            </Button>
-            <Button onClick={() => setShowTelegramDialog(true)} variant="outline" className="border-white text-white hover:bg-white/10">
-              <Settings className="mr-2 w-4 h-4" />Telegram
+              <Settings className="mr-2 w-4 h-4" />Ayarlar
             </Button>
             <Button onClick={handleLogout} variant="outline" className="border-white text-white hover:bg-white/10">
               <LogOut className="mr-2 w-4 h-4" />Cikis
