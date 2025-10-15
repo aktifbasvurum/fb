@@ -31,6 +31,7 @@ function AdminDashboard({ user, setUser }) {
   const [newAccount, setNewAccount] = useState({
     category_id: '',
     cookie_data: '',
+    password: '',
     price_tl: ''
   });
 
