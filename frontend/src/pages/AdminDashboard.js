@@ -648,6 +648,7 @@ function AdminDashboard({ user, setUser }) {
             </div>
           )}
         </DialogContent>
+      </Dialog>
     </div>
   );
 }
