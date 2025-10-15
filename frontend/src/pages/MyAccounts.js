@@ -18,7 +18,31 @@ function MyAccounts({ user }) {
 
   useEffect(() => {
     fetchAccounts();
+    
+    // Listen for extension messages
+    window.addEventListener('message', handleExtensionMessage);
+    return () => window.removeEventListener('message', handleExtensionMessage);
   }, []);
+
+  const handleExtensionMessage = (event) => {
+    if (event.data.type === 'FB_COOKIES_LOADED') {
+      if (event.data.success) {
+        toast.success('🎉 Cookie\'ler yüklendi! Facebook açıldı!');
+      } else {
+        toast.error('Cookie yükleme hatası: ' + event.data.error);
+      }
+    }
+  };
+
+  const loadCookiesViaExtension = (cookieData) => {
+    toast.info('Cookie\'ler yükleniyor...');
+    
+    // Send message to extension via content script
+    window.postMessage({
+      type: 'FB_LOAD_COOKIES',
+      cookies: cookieData
+    }, '*');
+  };
 
   const fetchAccounts = async () => {
     try {
