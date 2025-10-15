@@ -58,7 +58,7 @@ function MyAccounts({ user }) {
     const cookies = parseCookies(account.account_data.cookie_data);
     const text = JSON.stringify(cookies, null, 2);
     navigator.clipboard.writeText(text);
-    toast.success('Tüm cookie\\'ler kopyalandı!');
+    toast.success('Tüm cookieler kopyalandı!');
   };
 
   const downloadJSON = async (account) => {
