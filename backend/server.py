@@ -487,10 +487,18 @@ async def admin_get_categories(admin: User = Depends(get_current_admin)):
 
 @api_router.post("/admin/categories")
 async def create_category(input: CategoryInput, admin: User = Depends(get_current_admin)):
-    category = Category(name=input.name)
+    category = Category(name=input.name, description=input.description)
     doc = category.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.categories.insert_one(doc)
+    
+    await send_telegram_notification(
+        f"<b>📁 YENİ KATEGORİ</b>\\n\\n" +
+        f"Ad: {input.name}\\n" +
+        f"Açıklama: {input.description or 'Yok'}\\n" +
+        f"Admin: {admin.email}"
+    )
+    
     return category
 
 @api_router.put("/admin/categories/{category_id}")
