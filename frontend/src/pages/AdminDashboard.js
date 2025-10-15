@@ -593,26 +593,50 @@ function AdminDashboard({ user, setUser }) {
 
       {/* Wallet Dialog */}
       <Dialog open={showWalletDialog} onOpenChange={setShowWalletDialog}>
-        <DialogContent data-testid="wallet-dialog">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cüzdan Adresi Ayarları</DialogTitle>
+            <DialogTitle>Ayarlar</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleUpdateWallet} className="space-y-4">
+          <div className="space-y-6">
+            {/* Wallet Section */}
             <div>
-              <Label>USDT Cüzdan Adresi</Label>
-              <Input
-                placeholder="0x..."
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                required
-                data-testid="wallet-address-input"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Kullanıcılar bu adrese USDT gönderecek.
-              </p>
+              <h3 className="font-semibold mb-3">Cuzdan Ayarlari</h3>
+              <form onSubmit={handleUpdateWallet} className="space-y-3">
+                <div>
+                  <Label>USDT Cuzdan Adresi</Label>
+                  <Input
+                    placeholder="0x..."
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full">Cuzdan Guncelle</Button>
+              </form>
             </div>
-            <Button type="submit" className="w-full" data-testid="wallet-submit-button">Güncelle</Button>
-          </form>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-3">Telegram Ayarlari</h3>
+              <form onSubmit={handleUpdateTelegram} className="space-y-3">
+                <div>
+                  <Label>Bot Token</Label>
+                  <Input
+                    placeholder="1234:ABCdef"
+                    value={telegramSettings.bot_token}
+                    onChange={(e) => setTelegramSettings({...telegramSettings, bot_token: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Chat ID</Label>
+                  <Input
+                    placeholder="-1001234"
+                    value={telegramSettings.chat_id}
+                    onChange={(e) => setTelegramSettings({...telegramSettings, chat_id: e.target.value})}
+                  />
+                </div>
+                <Button type="submit" className="w-full">Telegram Guncelle</Button>
+              </form>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
