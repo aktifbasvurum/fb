@@ -468,10 +468,16 @@ function AdminDashboard({ user, setUser }) {
       </div>
 
       {/* Category Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+      <Dialog open={showCategoryDialog} onOpenChange={(open) => {
+        setShowCategoryDialog(open);
+        if (!open) {
+          setEditingCategory(null);
+          setNewCategory('');
+        }
+      }}>
         <DialogContent data-testid="category-dialog">
           <DialogHeader>
-            <DialogTitle>Yeni Kategori Oluştur</DialogTitle>
+            <DialogTitle>{editingCategory ? 'Kategori Düzenle' : 'Yeni Kategori Oluştur'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateCategory} className="space-y-4">
             <div>
@@ -484,7 +490,9 @@ function AdminDashboard({ user, setUser }) {
                 data-testid="category-name-input"
               />
             </div>
-            <Button type="submit" className="w-full" data-testid="category-submit-button">Oluştur</Button>
+            <Button type="submit" className="w-full" data-testid="category-submit-button">
+              {editingCategory ? 'Güncelle' : 'Oluştur'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
