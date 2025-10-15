@@ -217,6 +217,13 @@ async def register(input: RegisterInput):
     
     await log_activity(user.id, user.email, "register", "New user registered")
     
+    # Telegram notification
+    await send_telegram_notification(
+        f"<b>🆕 YENİ KULLANICI</b>\\n\\n" +
+        f"Email: {user.email}\\n" +
+        f"Tarih: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}"
+    )
+    
     token = create_token({"sub": user.id, "email": user.email, "role": user.role})
     return {"token": token, "user": {"id": user.id, "email": user.email, "balance_tl": user.balance_tl, "role": user.role}}
 
