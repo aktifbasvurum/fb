@@ -56,6 +56,31 @@ function MyAccounts({ user }) {
     }, '*');
   };
 
+  const downloadLauncher = async (account) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/accounts/${account.account_id}/download-launcher`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Facebook_Account_${account.account_id.substring(0, 8)}.bat`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('✅ Launcher indirildi! Çift tıklayarak çalıştırın.');
+    } catch (error) {
+      toast.error('Launcher indirilemedi!');
+      console.error(error);
+    }
+  };
+
   const fetchAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
