@@ -493,6 +493,34 @@ exit /b %EXITCODE%
     
     return Response(content=batch_content.encode('utf-8'), headers=headers)
 
+@api_router.get("/accounts/{account_id}/download-json")
+async def download_account_json(account_id: str, user: User = Depends(get_current_user)):
+    # Find purchased account
+    account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    cookie_data = account['account_data']['cookie_data']
+    
+    # Create JSON for desktop app
+    import json
+    json_data = {
+        "name": f"Facebook Account {account_id[:8]}",
+        "email": user.email,
+        "account_id": account_id,
+        "cookies": json.loads(cookie_data) if isinstance(cookie_data, str) else cookie_data
+    }
+    
+    # Return as downloadable JSON file
+    from fastapi.responses import Response
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="FB_Account_{account_id[:8]}.json"',
+        'Content-Type': 'application/json'
+    }
+    
+    return Response(content=json.dumps(json_data, indent=2).encode('utf-8'), headers=headers)
+
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, user: User = Depends(get_current_user)):
     # Find purchased account
