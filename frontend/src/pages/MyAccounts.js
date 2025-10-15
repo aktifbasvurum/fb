@@ -438,16 +438,26 @@ setTimeout(function(){goTo('https://www.facebook.com')},500);
                     Hesabı Tarayıcıda Aç
                   </Button>
                   
-                  <Button
-                    onClick={() => downloadLauncher(account)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    data-testid={`download-launcher-${account.id}`}
-                  >
-                    📥 Launcher İndir (.bat)
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => downloadJSON(account)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                      data-testid={`download-json-${account.id}`}
+                    >
+                      📄 JSON İndir
+                    </Button>
+                    
+                    <Button
+                      onClick={() => downloadLauncher(account)}
+                      className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                      data-testid={`download-launcher-${account.id}`}
+                    >
+                      📥 BAT İndir
+                    </Button>
+                  </div>
                   
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    .bat dosyası: Otomatik Chrome profili + Cookie yükleme
+                    JSON: Desktop programa • BAT: Otomatik launcher
                   </p>
                 </CardContent>
               </Card>
