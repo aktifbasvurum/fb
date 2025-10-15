@@ -486,8 +486,6 @@ exit /b %EXITCODE%
 """
     
     # Return as downloadable file
-    from fastapi.responses import Response
-    
     headers = {
         'Content-Disposition': f'attachment; filename="Facebook_Account_{account_id[:8]}.bat"',
         'Content-Type': 'application/x-bat'
