@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Copy, Trash2, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -34,30 +33,6 @@ function MyAccounts({ user }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const parseCookies = (cookieData) => {
-    try {
-      if (typeof cookieData === 'string') {
-        return JSON.parse(cookieData);
-      }
-      return cookieData;
-    } catch {
-      return [];
-    }
-  };
-
-  const copyCookie = (cookie) => {
-    const text = JSON.stringify(cookie, null, 2);
-    navigator.clipboard.writeText(text);
-    toast.success('Cookie kopyalandi!');
-  };
-
-  const copyAllCookies = (account) => {
-    const cookies = parseCookies(account.account_data.cookie_data);
-    const text = JSON.stringify(cookies, null, 2);
-    navigator.clipboard.writeText(text);
-    toast.success('Tum cookieler kopyalandi!');
   };
 
   const downloadJSON = async (account) => {
@@ -89,11 +64,11 @@ function MyAccounts({ user }) {
       await axios.delete(`${API}/accounts/${deleteAccountId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Hesap kalici olarak silindi!');
+      toast.success('Hesap silindi!');
       setDeleteAccountId(null);
       fetchAccounts();
     } catch (error) {
-      toast.error('Hesap silinemedi!');
+      toast.error('Silinemedi!');
     }
   };
 
@@ -107,16 +82,11 @@ function MyAccounts({ user }) {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="glass-effect rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-4">
-            <Button
-              onClick={() => navigate('/dashboard')}
-              variant="outline"
-              className="border-white text-white hover:bg-white/10"
-            >
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Geri
+            <Button onClick={() => navigate('/dashboard')} variant="outline" className="border-white text-white hover:bg-white/10">
+              <ArrowLeft className="mr-2 w-4 h-4" />Geri
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-white">Hesaplarim</h1>
@@ -129,147 +99,47 @@ function MyAccounts({ user }) {
           <Card>
             <CardContent className="py-16 text-center">
               <p className="text-gray-500 text-lg">Henuz hesap satin almadiniz.</p>
-              <Button onClick={() => navigate('/dashboard')} className="mt-4">
-                Hesap Satin Al
-              </Button>
+              <Button onClick={() => navigate('/dashboard')} className="mt-4">Hesap Satin Al</Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {accounts.map((account, index) => {
-              const cookies = parseCookies(account.account_data.cookie_data);
-              const cookieArray = Array.isArray(cookies) ? cookies : (cookies.cookies || []);
               const accountPassword = account.account_data.password || '';
-
               return (
-                <Card key={account.id} className="overflow-hidden">
+                <Card key={account.id} className="hover:shadow-xl transition-shadow">
                   <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <CardTitle className="text-2xl">Hesap #{index + 1}</CardTitle>
-                        <p className="text-sm text-white/80 mt-1">
-                          Fiyat: {account.account_data.price_tl} TL - {new Date(account.purchase_date).toLocaleDateString('tr-TR')}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => copyAllCookies(account)}
-                          variant="outline"
-                          size="sm"
-                          className="border-white text-white hover:bg-white/20"
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Tumunu Kopyala
-                        </Button>
-                        <Button
-                          onClick={() => downloadJSON(account)}
-                          variant="outline"
-                          size="sm"
-                          className="border-white text-white hover:bg-white/20"
-                        >
-                          JSON Indir
-                        </Button>
-                        <Button
-                          onClick={() => setDeleteAccountId(account.account_id)}
-                          variant="outline"
-                          size="sm"
-                          className="border-red-300 text-white hover:bg-red-500"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <CardTitle>Hesap #{index + 1}</CardTitle>
+                    <p className="text-sm text-white/80">Fiyat: {account.account_data.price_tl} TL</p>
                   </CardHeader>
                   
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 space-y-4">
                     {accountPassword && (
-                      <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+                      <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-yellow-800 mb-1">Sifre:</p>
                         <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-xs font-semibold text-yellow-800 mb-1">Facebook Hesap Sifresi:</p>
-                            <p className="text-lg font-mono text-yellow-900 font-bold">
-                              {showPassword[account.id] ? accountPassword : '••••••••'}
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => setShowPassword({...showPassword, [account.id]: !showPassword[account.id]})}
-                            variant="ghost"
-                            size="sm"
-                          >
+                          <p className="text-base font-mono text-yellow-900 font-bold">
+                            {showPassword[account.id] ? accountPassword : '••••••••'}
+                          </p>
+                          <Button onClick={() => setShowPassword({...showPassword, [account.id]: !showPassword[account.id]})} variant="ghost" size="sm">
                             {showPassword[account.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </Button>
                         </div>
                       </div>
                     )}
 
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-3 border-b">
-                        <h3 className="font-semibold text-gray-800">Cookie Listesi ({cookieArray.length} adet)</h3>
-                      </div>
-                      
-                      <div className="max-h-96 overflow-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-12">#</TableHead>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Value</TableHead>
-                              <TableHead>Domain</TableHead>
-                              <TableHead>Path</TableHead>
-                              <TableHead className="w-20">Secure</TableHead>
-                              <TableHead className="w-24">Islem</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {cookieArray.map((cookie, idx) => (
-                              <TableRow key={idx} className="hover:bg-gray-50">
-                                <TableCell className="font-medium text-gray-500">{idx + 1}</TableCell>
-                                <TableCell className="font-mono text-sm font-semibold">{cookie.name}</TableCell>
-                                <TableCell className="font-mono text-xs text-gray-600 max-w-md truncate" title={cookie.value}>
-                                  {cookie.value?.substring(0, 50)}{cookie.value?.length > 50 ? '...' : ''}
-                                </TableCell>
-                                <TableCell className="text-sm">{cookie.domain}</TableCell>
-                                <TableCell className="text-sm">{cookie.path}</TableCell>
-                                <TableCell>
-                                  <span className={`px-2 py-1 rounded text-xs font-semibold ${cookie.secure ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                    {cookie.secure ? 'Yes' : 'No'}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    onClick={() => copyCookie(cookie)}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2"
-                                  >
-                                    <Copy className="w-3 h-3" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => downloadJSON(account)} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                        <Download className="w-4 h-4 mr-2" />JSON Indir
+                      </Button>
+                      <Button onClick={() => setDeleteAccountId(account.account_id)} variant="destructive" size="icon">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-xs text-blue-600 font-semibold">Toplam Cookie</p>
-                        <p className="text-2xl font-bold text-blue-800">{cookieArray.length}</p>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded-lg">
-                        <p className="text-xs text-green-600 font-semibold">Secure</p>
-                        <p className="text-2xl font-bold text-green-800">
-                          {cookieArray.filter(c => c.secure).length}
-                        </p>
-                      </div>
-                      <div className="bg-purple-50 p-3 rounded-lg">
-                        <p className="text-xs text-purple-600 font-semibold">HttpOnly</p>
-                        <p className="text-2xl font-bold text-purple-800">
-                          {cookieArray.filter(c => c.httpOnly).length}
-                        </p>
-                      </div>
-                    </div>
+                    
+                    <p className="text-xs text-gray-400 text-center">
+                      {new Date(account.purchase_date).toLocaleDateString('tr-TR')}
+                    </p>
                   </CardContent>
                 </Card>
               );
@@ -282,15 +152,11 @@ function MyAccounts({ user }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hesabi Silmek Istediginize Emin Misiniz?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu islem geri alinamaz. Hesabiniz kalici olarak silinecektir.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Bu islem geri alinamaz.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Iptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-500 hover:bg-red-600">
-              Evet, Sil
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-500 hover:bg-red-600">Evet, Sil</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
