@@ -25,6 +25,7 @@ function AdminDashboard({ user, setUser }) {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [showWalletDialog, setShowWalletDialog] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [newCategory, setNewCategory] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [newAccount, setNewAccount] = useState({
