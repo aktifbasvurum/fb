@@ -107,20 +107,18 @@ function AdminDashboard({ user, setUser }) {
     try {
       const token = localStorage.getItem('token');
       if (editingCategory) {
-        // Update existing category
-        await axios.put(`${API}/admin/categories/${editingCategory.id}`, { name: newCategory }, {
+        await axios.put(`${API}/admin/categories/${editingCategory.id}`, newCategory, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success('Kategori güncellendi!');
+        toast.success('Kategori guncellendi!');
       } else {
-        // Create new category
-        await axios.post(`${API}/admin/categories`, { name: newCategory }, {
+        await axios.post(`${API}/admin/categories`, newCategory, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success('Kategori oluşturuldu!');
+        toast.success('Kategori olusturuldu!');
       }
       setShowCategoryDialog(false);
-      setNewCategory('');
+      setNewCategory({ name: '', description: '' });
       setEditingCategory(null);
       fetchData();
     } catch (error) {
