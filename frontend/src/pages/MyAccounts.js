@@ -35,10 +35,10 @@ function MyAccounts({ user }) {
     }
   };
 
-  const downloadJSON = async (account) => {
+  const downloadTXT = async (account) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/accounts/${account.account_id}/download-json`, {
+      const response = await axios.get(`${API}/accounts/${account.account_id}/download-txt`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -46,13 +46,13 @@ function MyAccounts({ user }) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `FB_Account_${account.account_id.substring(0, 8)}.json`);
+      link.setAttribute('download', `FB_Hesap_${account.account_id.substring(0, 8)}.txt`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      toast.success('JSON indirildi!');
+      toast.success('Hesap bilgileri indirildi!');
     } catch (error) {
       toast.error('Indirilemedi!');
     }
