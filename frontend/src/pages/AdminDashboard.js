@@ -215,23 +215,14 @@ function AdminDashboard({ user, setUser }) {
             <p className="text-white/80">Hoş geldiniz, {user?.email}</p>
           </div>
           <div className="flex gap-3">
-            <Button
-              onClick={() => setShowWalletDialog(true)}
-              variant="outline"
-              className="border-white text-white hover:bg-white/10"
-              data-testid="wallet-settings-button"
-            >
-              <Settings className="mr-2 w-4 h-4" />
-              Cüzdan Ayarları
+            <Button onClick={() => setShowWalletDialog(true)} variant="outline" className="border-white text-white hover:bg-white/10">
+              <Settings className="mr-2 w-4 h-4" />Cuzdan
             </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="border-white text-white hover:bg-white/10"
-              data-testid="admin-logout-button"
-            >
-              <LogOut className="mr-2 w-4 h-4" />
-              Çıkış
+            <Button onClick={() => setShowTelegramDialog(true)} variant="outline" className="border-white text-white hover:bg-white/10">
+              <Settings className="mr-2 w-4 h-4" />Telegram
+            </Button>
+            <Button onClick={handleLogout} variant="outline" className="border-white text-white hover:bg-white/10">
+              <LogOut className="mr-2 w-4 h-4" />Cikis
             </Button>
           </div>
         </div>
