@@ -394,7 +394,7 @@ function AdminDashboard({ user, setUser }) {
                               variant="outline"
                               onClick={() => {
                                 setEditingCategory(category);
-                                setNewCategory(category.name);
+                                setNewCategory({ name: category.name, description: category.description || '' });
                                 setShowCategoryDialog(true);
                               }}
                               data-testid={`edit-category-${category.id}`}
