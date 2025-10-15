@@ -505,7 +505,6 @@ async def download_account_json(account_id: str, user: User = Depends(get_curren
     cookie_data = account['account_data']['cookie_data']
     
     # Create JSON for desktop app
-    import json
     json_data = {
         "name": f"Facebook Account {account_id[:8]}",
         "email": user.email,
