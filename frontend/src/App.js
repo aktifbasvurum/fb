@@ -6,6 +6,7 @@ import RegisterPage from '@/pages/RegisterPage';
 import LoginPage from '@/pages/LoginPage';
 import UserDashboard from '@/pages/UserDashboard';
 import MyAccounts from '@/pages/MyAccounts';
+import ProfilePage from '@/pages/ProfilePage';
 import AdminLogin from '@/pages/AdminLogin';
 import AdminDashboard from '@/pages/AdminDashboard';
 import { Toaster } from '@/components/ui/sonner';
