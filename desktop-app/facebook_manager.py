@@ -272,8 +272,24 @@ class PlatoonFacebookManager:
             
             for cookie in cookies:
                 try:
-                    cd = {'name': cookie.get('name', ''), 'value': cookie.get('value', ''), 'domain': cookie.get('domain', '.facebook.com'), 'path': cookie.get('path', '/')}\n                    if 'secure' in cookie: cd['secure'] = cookie['secure']\n                    if 'httpOnly' in cookie: cd['httpOnly'] = cookie['httpOnly']\n                    if 'expirationDate' in cookie: cd['expiry'] = int(float(cookie['expirationDate']))\n                    driver.add_cookie(cd)
-                except:\n                    pass\n            \n            driver.refresh()\n            time.sleep(3)\n            \n            # Auto login if password is provided
+                    cd = {
+                        'name': cookie.get('name', ''), 
+                        'value': cookie.get('value', ''), 
+                        'domain': cookie.get('domain', '.facebook.com'), 
+                        'path': cookie.get('path', '/')
+                    }
+                    if 'secure' in cookie: 
+                        cd['secure'] = cookie['secure']
+                    if 'httpOnly' in cookie: 
+                        cd['httpOnly'] = cookie['httpOnly']
+                    if 'expirationDate' in cookie: 
+                        cd['expiry'] = int(float(cookie['expirationDate']))
+                    driver.add_cookie(cd)
+                except:
+                    pass
+            
+            driver.refresh()
+            time.sleep(3)\n            \n            # Auto login if password is provided
             password = account.get('password', '')
             if password:
                 try:
