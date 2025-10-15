@@ -25,9 +25,14 @@ function AdminDashboard({ user, setUser }) {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [showWalletDialog, setShowWalletDialog] = useState(false);
+  const [showTelegramDialog, setShowTelegramDialog] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [newCategory, setNewCategory] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [walletAddress, setWalletAddress] = useState('');
+  const [telegramSettings, setTelegramSettings] = useState({ bot_token: '', chat_id: '' });
+  const [balanceForm, setBalanceForm] = useState({ balance_tl: 0 });
   const [newAccount, setNewAccount] = useState({
     category_id: '',
     cookie_data: '',
