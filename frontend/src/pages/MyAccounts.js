@@ -424,6 +424,12 @@ setTimeout(function(){goTo('https://www.facebook.com')},500);
                       <DollarSign className="w-4 h-4" />
                       <span>Fiyat: ₺{account.account_data.price_tl}</span>
                     </div>
+                    {account.account_data.password && (
+                      <div className="bg-yellow-50 border border-yellow-200 p-2 rounded">
+                        <p className="text-xs font-semibold text-yellow-800">Şifre:</p>
+                        <p className="text-sm font-mono text-yellow-900">{account.account_data.password}</p>
+                      </div>
+                    )}
                     <div className="text-xs text-gray-400">
                       {new Date(account.purchase_date).toLocaleDateString('tr-TR')}
                     </div>
