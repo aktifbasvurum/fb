@@ -525,10 +525,21 @@ function AdminDashboard({ user, setUser }) {
                 placeholder='{"cookies": [...]}'
                 value={newAccount.cookie_data}
                 onChange={(e) => setNewAccount({ ...newAccount, cookie_data: e.target.value })}
-                rows={6}
+                rows={5}
                 required
                 data-testid="account-cookie-input"
               />
+            </div>
+            <div>
+              <Label>Hesap Şifresi (opsiyonel)</Label>
+              <Input
+                type="text"
+                placeholder="hesapsifre123"
+                value={newAccount.password}
+                onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
+                data-testid="account-password-input"
+              />
+              <p className="text-xs text-gray-500 mt-1">Otomatik giriş için Facebook hesap şifresi</p>
             </div>
             <div>
               <Label>Fiyat (TL)</Label>
