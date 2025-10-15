@@ -402,6 +402,19 @@ echo.
 echo 🚀 Facebook hesabı açılıyor...
 echo.
 
+REM Download Python launcher if not exists
+if not exist "%~dp0fb_launcher.py" (
+    echo 📥 Python launcher indiriliyor...
+    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:3000/fb_launcher.py' -OutFile '%~dp0fb_launcher.py'" >nul 2>&1
+    if errorlevel 1 (
+        echo ❌ Launcher indirilemedi!
+        echo Manuel indirme: http://localhost:3000/fb_launcher.py
+        pause
+        exit /b 1
+    )
+    echo ✅ Launcher indirildi!
+)
+
 REM Create cookies file
 echo {cookie_data} > "%TEMP%\\fb_cookies_{account_id}.json"
 
