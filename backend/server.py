@@ -357,6 +357,7 @@ async def download_account_launcher(account_id: str, user: User = Depends(get_cu
     batch_content = f"""@echo off
 chcp 65001 >nul
 title Facebook Account Launcher - {profile_name}
+color 0A
 
 echo ================================
 echo Facebook Account Launcher
@@ -366,66 +367,123 @@ echo Profile: {profile_name}
 echo.
 
 REM Check if Python is installed
+echo [1/5] Python kontrolu...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Python bulunamadı!
     echo.
-    echo Lütfen Python yükleyin: https://www.python.org/downloads/
-    echo Kurulum sırasında "Add Python to PATH" seçeneğini işaretleyin
+    echo ❌ HATA: Python bulunamadi!
+    echo.
+    echo Lutfen Python yukleyin: https://www.python.org/downloads/
+    echo Kurulum sirasinda "Add Python to PATH" secenegini isaretleyin
+    echo.
+    echo Kurulumdan sonra bilgisayari yeniden baslatin.
+    echo.
     pause
     exit /b 1
 )
+echo    ✅ Python bulundu
 
-REM Check if selenium is installed
+REM Check if pip is working
+echo [2/5] Pip kontrolu...
+python -m pip --version >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ❌ HATA: Pip calısmiyor!
+    echo.
+    pause
+    exit /b 1
+)
+echo    ✅ Pip hazir
+
+REM Install/Check selenium
+echo [3/5] Selenium kontrolu...
 python -c "import selenium" >nul 2>&1
 if errorlevel 1 (
-    echo 📦 Selenium yükleniyor...
-    pip install selenium >nul 2>&1
+    echo    📦 Selenium yukleniyor (ilk seferde biraz surebilir)...
+    python -m pip install selenium --quiet
     if errorlevel 1 (
-        echo ❌ Selenium yüklenemedi!
+        echo.
+        echo ❌ HATA: Selenium yuklenemedi!
+        echo.
+        echo Manuel yukleme icin CMD'de calistirin:
+        echo pip install selenium
+        echo.
         pause
         exit /b 1
     )
-    echo ✅ Selenium yüklendi!
+    echo    ✅ Selenium yuklendi
+) else (
+    echo    ✅ Selenium hazir
 )
 
-REM Check if Chrome is installed
+REM Check Chrome
+echo [4/5] Chrome kontrolu...
 reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Google Chrome bulunamadı!
-    echo Lütfen Google Chrome yükleyin: https://www.google.com/chrome/
+    echo.
+    echo ❌ HATA: Google Chrome bulunamadi!
+    echo.
+    echo Lutfen Chrome yukleyin: https://www.google.com/chrome/
+    echo.
     pause
     exit /b 1
 )
+echo    ✅ Chrome bulundu
 
-echo.
-echo 🚀 Facebook hesabı açılıyor...
-echo.
-
-REM Download Python launcher if not exists
-if not exist "%~dp0fb_launcher.py" (
-    echo 📥 Python launcher indiriliyor...
-    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:3000/fb_launcher.py' -OutFile '%~dp0fb_launcher.py'" >nul 2>&1
+REM Download Python launcher if needed
+echo [5/5] Launcher kontrolu...
+set "LAUNCHER_FILE=%~dp0fb_launcher.py"
+if not exist "%LAUNCHER_FILE%" (
+    echo    📥 Python launcher indiriliyor...
+    powershell -NoProfile -Command "try {{ Invoke-WebRequest -Uri '{BACKEND_URL}/fb_launcher.py' -OutFile '%LAUNCHER_FILE%' -UseBasicParsing }} catch {{ exit 1 }}" >nul 2>&1
     if errorlevel 1 (
-        echo ❌ Launcher indirilemedi!
-        echo Manuel indirme: http://localhost:3000/fb_launcher.py
+        echo.
+        echo ❌ HATA: Launcher indirilemedi!
+        echo.
+        echo Elle indirin: {BACKEND_URL}/fb_launcher.py
+        echo Dosyayi su konuma kaydedin: %LAUNCHER_FILE%
+        echo.
         pause
         exit /b 1
     )
-    echo ✅ Launcher indirildi!
+    echo    ✅ Launcher indirildi
+) else (
+    echo    ✅ Launcher hazir
 )
 
-REM Create cookies file
-echo {cookie_data} > "%TEMP%\\fb_cookies_{account_id}.json"
+echo.
+echo ================================
+echo 🚀 Facebook aciliyor...
+echo ================================
+echo.
+
+REM Create temp cookies file
+set "COOKIES_FILE=%TEMP%\\fb_cookies_{account_id}.json"
+(
+echo {cookie_data.replace('"', '""')}
+) > "%COOKIES_FILE%"
 
 REM Run Python launcher
-python "%~dp0fb_launcher.py" "{profile_name}" @"%TEMP%\\fb_cookies_{account_id}.json"
+python "%LAUNCHER_FILE%" "{profile_name}" "%COOKIES_FILE%"
+
+REM Store exit code
+set EXITCODE=%ERRORLEVEL%
 
 REM Cleanup
-del "%TEMP%\\fb_cookies_{account_id}.json" >nul 2>&1
+if exist "%COOKIES_FILE%" del "%COOKIES_FILE%" >nul 2>&1
+
+if %EXITCODE% NEQ 0 (
+    echo.
+    echo ❌ Bir hata olustu! Exit code: %EXITCODE%
+    echo.
+)
 
 echo.
+echo ================================
+echo Program tamamlandi
+echo ================================
 pause
+exit /b %EXITCODE%
 """
     
     # Return as downloadable file
