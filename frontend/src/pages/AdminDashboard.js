@@ -373,14 +373,28 @@ function AdminDashboard({ user, setUser }) {
                         <TableCell>{category.available_count}</TableCell>
                         <TableCell>{category.sold_count}</TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            data-testid={`delete-category-${category.id}`}
-                          >
-                            Sil
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingCategory(category);
+                                setNewCategory(category.name);
+                                setShowCategoryDialog(true);
+                              }}
+                              data-testid={`edit-category-${category.id}`}
+                            >
+                              Düzenle
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteCategory(category.id)}
+                              data-testid={`delete-category-${category.id}`}
+                            >
+                              Sil
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
