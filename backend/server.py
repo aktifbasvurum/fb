@@ -257,6 +257,16 @@ async def create_payment_request(input: PaymentRequestInput, user: User = Depend
     await db.payment_requests.insert_one(doc)
     
     await log_activity(user.id, user.email, "payment_request", f"Requested {input.amount_usdt} USDT")
+    
+    # Telegram notification
+    await send_telegram_notification(
+        f"<b>💰 YENİ ÖDEME TALEBİ</b>\\n\\n" +
+        f"Kullanıcı: {user.email}\\n" +
+        f"Miktar: {input.amount_usdt} USDT ({amount_tl:.2f} TL)\\n" +
+        f"Cüzdan: {input.wallet_address}\\n" +
+        f"Tarih: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}"
+    )
+    
     return {"message": "Payment request submitted", "payment": payment}
 
 @api_router.get("/payment/my-requests")
