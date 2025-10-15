@@ -37,6 +37,14 @@ function MyAccounts({ user }) {
   const openAccountInNewWindow = (account) => {
     const cookieData = account.account_data.cookie_data;
     
+    // Check if extension is installed
+    if (window.FB_COOKIE_LOADER_INSTALLED) {
+      // Use extension to load cookies automatically
+      loadCookiesViaExtension(cookieData);
+      return;
+    }
+    
+    // Fallback to manual method
     const newWindow = window.open('', '_blank', 'width=1400,height=900');
     
     if (!newWindow) {
