@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, ExternalLink, Trash2, Building2, DollarSign } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -13,98 +14,14 @@ const API = `${BACKEND_URL}/api`;
 function MyAccounts({ user }) {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
   const [deleteAccountId, setDeleteAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showExtensionInfo, setShowExtensionInfo] = useState(false);
-  const [extensionInstalled, setExtensionInstalled] = useState(false);
+  const [showPassword, setShowPassword] = useState({});
 
   useEffect(() => {
     fetchAccounts();
-    
-    // Check if extension is installed
-    setTimeout(() => {
-      if (window.FB_COOKIE_LOADER_INSTALLED) {
-        setExtensionInstalled(true);
-        toast.success('🎉 Extension aktif! Otomatik cookie yükleme hazır!');
-      } else {
-        setShowExtensionInfo(true);
-      }
-    }, 1000);
-    
-    // Listen for extension messages
-    window.addEventListener('message', handleExtensionMessage);
-    return () => window.removeEventListener('message', handleExtensionMessage);
   }, []);
-
-  const handleExtensionMessage = (event) => {
-    if (event.data.type === 'FB_COOKIES_LOADED') {
-      if (event.data.success) {
-        toast.success('🎉 Cookie\'ler yüklendi! Facebook açıldı!');
-      } else {
-        toast.error('Cookie yükleme hatası: ' + event.data.error);
-      }
-    }
-  };
-
-  const loadCookiesViaExtension = (cookieData) => {
-    toast.info('Cookie\'ler yükleniyor...');
-    
-    // Send message to extension via content script
-    window.postMessage({
-      type: 'FB_LOAD_COOKIES',
-      cookies: cookieData
-    }, '*');
-  };
-
-  const downloadLauncher = async (account) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/accounts/${account.account_id}/download-launcher`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Facebook_Account_${account.account_id.substring(0, 8)}.bat`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success('✅ Launcher indirildi! Çift tıklayarak çalıştırın.');
-    } catch (error) {
-      toast.error('Launcher indirilemedi!');
-      console.error(error);
-    }
-  };
-
-  const downloadJSON = async (account) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/accounts/${account.account_id}/download-json`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `FB_Account_${account.account_id.substring(0, 8)}.json`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success('✅ JSON indirildi! Desktop programa ekleyin.');
-    } catch (error) {
-      toast.error('JSON indirilemedi!');
-      console.error(error);
-    }
-  };
 
   const fetchAccounts = async () => {
     try {
@@ -120,179 +37,51 @@ function MyAccounts({ user }) {
     }
   };
 
-  const openAccountInNewWindow = (account) => {
-    const cookieData = account.account_data.cookie_data;
-    
-    // Check if extension is installed
-    if (window.FB_COOKIE_LOADER_INSTALLED) {
-      // Use extension to load cookies automatically
-      loadCookiesViaExtension(cookieData);
-      return;
-    }
-    
-    // Fallback to manual method
-    const newWindow = window.open('', '_blank', 'width=1400,height=900');
-    
-    if (!newWindow) {
-      toast.error('Pop-up engelleyici tarafından engellendi!');
-      return;
-    }
-
-    const cookieScript = `(function() {
-  try {
-    const cookieData = ${JSON.stringify(cookieData)};
-    let cookies = [];
-    
-    if (typeof cookieData === 'string') {
-      cookies = JSON.parse(cookieData);
-    } else if (Array.isArray(cookieData)) {
-      cookies = cookieData;
-    } else if (cookieData.cookies && Array.isArray(cookieData.cookies)) {
-      cookies = cookieData.cookies;
-    }
-    
-    let count = 0;
-    cookies.forEach(function(cookie) {
-      try {
-        let str = cookie.name + '=' + cookie.value + ';';
-        if (cookie.domain) str += 'domain=' + cookie.domain + ';';
-        if (cookie.path) str += 'path=' + cookie.path + ';';
-        if (cookie.secure) str += 'secure;';
-        if (cookie.sameSite) str += 'SameSite=' + cookie.sameSite + ';';
-        document.cookie = str;
-        count++;
-      } catch(e) {
-        console.error('Cookie error:', cookie.name, e);
+  const parseCookies = (cookieData) => {
+    try {
+      if (typeof cookieData === 'string') {
+        return JSON.parse(cookieData);
       }
-    });
-    
-    alert('✅ ' + count + ' cookie yüklendi! Sayfa yenileniyor...');
-    setTimeout(function() { location.reload(); }, 500);
-  } catch(e) {
-    alert('❌ Hata: ' + e.message);
-    console.error(e);
-  }
-})();`;
+      return cookieData;
+    } catch {
+      return [];
+    }
+  };
 
-    const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Facebook Account - Cookie Manager</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#f3f4f6;display:flex;flex-direction:column;height:100vh}
-.header{background:#fff;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;gap:8px;flex-wrap:wrap;border-bottom:3px solid #667eea}
-.btn{padding:8px 16px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
-.btn-big{padding:10px 20px;font-size:14px;animation:pulse 2s infinite}
-.btn-nav{padding:6px 10px;background:#f3f4f6;color:#374151;font-size:16px;min-width:36px}
-.btn-nav:hover{background:#e5e7eb}
-.btn-success{background:#10b981;color:#fff}
-.btn-success:hover{background:#059669;transform:translateY(-2px)}
-.btn-primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}
-.btn-primary:hover{transform:translateY(-2px)}
-.btn-secondary{background:#f3f4f6;color:#374151}
-.btn-secondary:hover{background:#e5e7eb}
-.btn-danger{background:#ef4444;color:#fff}
-.btn-danger:hover{background:#dc2626}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.7)}50%{box-shadow:0 0 0 10px rgba(16,185,129,0)}}
-.content{display:flex;flex:1;overflow:hidden}
-.sidebar{width:400px;background:#fff;border-right:2px solid #e5e7eb;overflow-y:auto}
-.sidebar-header{padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}
-.sidebar-header h3{font-size:18px;margin-bottom:8px}
-.alert{background:#fef3c7;border-left:4px solid #f59e0b;padding:16px 20px;margin:20px}
-.alert strong{color:#92400e;display:block;margin-bottom:8px}
-.alert p{color:#78350f;font-size:13px}
-.steps{padding:20px}
-.step{background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:10px;border-left:3px solid #667eea}
-.step-title{font-weight:600;color:#374151;margin-bottom:6px;font-size:13px}
-.step-desc{color:#6b7280;font-size:12px}
-.iframe-container{flex:1}
-iframe{width:100%;height:100%;border:none}
-.toast{position:fixed;top:80px;right:20px;background:#10b981;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:none;z-index:1000}
-</style>
-</head>
-<body>
+  const copyCookie = (cookie) => {
+    const text = JSON.stringify(cookie, null, 2);
+    navigator.clipboard.writeText(text);
+    toast.success('Cookie kopyalandı!');
+  };
 
-<div class="header">
-<button class="btn btn-nav" onclick="goBack()">←</button>
-<button class="btn btn-nav" onclick="goForward()">→</button>
-<button class="btn btn-nav" onclick="reload()">↻</button>
-<button class="btn btn-success btn-big" onclick="loadCookies()">🚀 Cookie'leri Yükle</button>
-<button class="btn btn-primary" onclick="goTo('https://www.facebook.com')">Facebook</button>
-<button class="btn btn-secondary" onclick="goTo('https://business.facebook.com')">Business</button>
-<button class="btn btn-secondary" onclick="goTo('https://www.facebook.com/me')">Profil</button>
-<button class="btn btn-secondary" onclick="goTo('https://adsmanager.facebook.com/adsmanager')">Ads Manager</button>
-<button class="btn btn-danger" onclick="window.close()">Kapat</button>
-</div>
+  const copyAllCookies = (account) => {
+    const cookies = parseCookies(account.account_data.cookie_data);
+    const text = JSON.stringify(cookies, null, 2);
+    navigator.clipboard.writeText(text);
+    toast.success('Tüm cookie\\'ler kopyalandı!');
+  };
 
-<div class="content">
-<div class="sidebar">
-<div class="sidebar-header">
-<h3>🍪 Cookie Yükleyici</h3>
-<p>Hesaba otomatik giriş</p>
-</div>
-
-<div class="alert">
-<strong>⚡ HIZLI BAŞLANGIÇ</strong>
-<p>1. "Facebook" butonuna tıklayın<br>2. Yeşil "🚀 Cookie'leri Yükle" butonuna basın<br>3. Console'a yapıştırın ve Enter - Hesap açılacak!</p>
-</div>
-
-<div class="steps">
-<h4 style="margin-bottom:12px;color:#1f2937">📋 Detaylı Adımlar:</h4>
-
-<div class="step">
-<div class="step-title">1️⃣ Facebook'a Git</div>
-<div class="step-desc">"Facebook" butonuna tıklayın</div>
-</div>
-
-<div class="step">
-<div class="step-title">2️⃣ Cookie'leri Yükle</div>
-<div class="step-desc">Yeşil butona bas. Script otomatik kopyalanacak</div>
-</div>
-
-<div class="step">
-<div class="step-title">3️⃣ Console Aç</div>
-<div class="step-desc">F12 bas → Console sekmesi</div>
-</div>
-
-<div class="step">
-<div class="step-title">4️⃣ Yapıştır ve Enter</div>
-<div class="step-desc">Ctrl+V → Enter bas 🎉</div>
-</div>
-</div>
-</div>
-
-<div class="iframe-container">
-<iframe id="frame" src="about:blank"></iframe>
-</div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-var cookieScript=${JSON.stringify(cookieScript)};
-
-function goTo(u){document.getElementById('frame').src=u}
-
-function goBack(){try{document.getElementById('frame').contentWindow.history.back()}catch(e){show('Geri gidilemedi')}}
-
-function goForward(){try{document.getElementById('frame').contentWindow.history.forward()}catch(e){show('İleri gidilemedi')}}
-
-function reload(){try{document.getElementById('frame').contentWindow.location.reload()}catch(e){var s=document.getElementById('frame').src;if(s&&s!=='about:blank')document.getElementById('frame').src=s;else show('Önce sayfa açın')}}
-
-function loadCookies(){var f=document.getElementById('frame');var s=f.src;if(!s||s==='about:blank'){alert('⚠️ Önce Facebook\\'a gidin!\\n\\n"Facebook" butonuna tıklayın');return}if(!s.includes('facebook.com')){alert('⚠️ Sadece Facebook için!\\n\\n"Facebook" butonuna tıklayın');return}var t=document.createElement('textarea');t.value=cookieScript;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{document.execCommand('copy');document.body.removeChild(t);alert('✅ Script kopyalandı!\\n\\nŞİMDİ:\\n1. Facebook penceresinde F12 basın\\n2. Console sekmesine gidin\\n3. Ctrl+V yapıştırın\\n4. Enter basın\\n\\nCookie\\'ler yüklenecek!');show('✅ Script kopyalandı! Console\\'a yapıştırın')}catch(e){alert('❌ Kopyalama başarısız!')}}
-
-function show(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(function(){t.style.display='none'},4000)}
-
-setTimeout(function(){goTo('https://www.facebook.com')},500);
-</script>
-
-</body>
-</html>`;
-
-    newWindow.document.write(htmlContent);
-    newWindow.document.close();
+  const downloadJSON = async (account) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/accounts/${account.account_id}/download-json`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `FB_Account_${account.account_id.substring(0, 8)}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('JSON indirildi!');
+    } catch (error) {
+      toast.error('İndirilemedi!');
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -311,182 +100,204 @@ setTimeout(function(){goTo('https://www.facebook.com')},500);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-white text-xl">Yükleniyor...</p>
+      <div className=\"min-h-screen flex items-center justify-center\">
+        <p className=\"text-white text-xl\">Yükleniyor...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="glass-effect rounded-2xl p-6 mb-6">
-          <div className="flex items-center gap-4">
+    <div className=\"min-h-screen p-6\">
+      <div className=\"max-w-7xl mx-auto\">
+        {/* Header */}
+        <div className=\"glass-effect rounded-2xl p-6 mb-6\">
+          <div className=\"flex items-center gap-4\">
             <Button
               onClick={() => navigate('/dashboard')}
-              variant="outline"
-              className="border-white text-white hover:bg-white/10"
-              data-testid="back-to-dashboard-button"
+              variant=\"outline\"
+              className=\"border-white text-white hover:bg-white/10\"
+              data-testid=\"back-to-dashboard-button\"
             >
-              <ArrowLeft className="mr-2 w-4 h-4" />
+              <ArrowLeft className=\"mr-2 w-4 h-4\" />
               Geri
             </Button>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white" data-testid="my-accounts-heading">
-                Satın Aldığım Hesaplar
+            <div>
+              <h1 className=\"text-3xl font-bold text-white\" data-testid=\"my-accounts-heading\">
+                Hesaplarım
               </h1>
-              <p className="text-white/80">{accounts.length} hesap</p>
+              <p className=\"text-white/80\">{accounts.length} hesap</p>
             </div>
-            {extensionInstalled && (
-              <div className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold">
-                ✅ Extension Aktif
-              </div>
-            )}
           </div>
         </div>
 
-        {showExtensionInfo && !extensionInstalled && (
-          <Card className="mb-6 border-2 border-yellow-400 bg-yellow-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-yellow-800">
-                <span className="text-2xl">⚡</span>
-                Otomatik Cookie Yükleme İçin Extension Yükleyin
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 mb-4">
-                Cookie'lerin otomatik yüklenmesi için Chrome Extension'ı kurmanız gerekiyor. 
-                Kurulum sadece <strong>2 dakika</strong> sürer ve sonrasında tüm hesaplar tek tıkla açılır!
-              </p>
-              <div className="bg-white p-4 rounded-lg mb-4">
-                <h3 className="font-bold mb-2 text-gray-800">📥 Hızlı Kurulum:</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                  <li>Extension'ı indirin (aşağıdaki buton)</li>
-                  <li>ZIP dosyasını çıkarın</li>
-                  <li>Chrome'da <code className="bg-gray-200 px-2 py-1 rounded">chrome://extensions/</code> açın</li>
-                  <li>"Geliştirici modu"nu aktif edin (sağ üst)</li>
-                  <li>"Paketten yükle" → Klasörü seçin</li>
-                  <li>Sayfayı yenileyin - Hazır! ✅</li>
-                </ol>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => window.open('/fb-cookie-loader-extension.zip', '_blank')}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  📥 Extension'ı İndir
-                </Button>
-                <Button
-                  onClick={() => setShowExtensionInfo(false)}
-                  variant="outline"
-                >
-                  Kapat
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {accounts.length === 0 ? (
           <Card>
-            <CardContent className="py-16 text-center">
-              <p className="text-gray-500 text-lg">Henüz hesap satın almadınız.</p>
-              <Button onClick={() => navigate('/dashboard')} className="mt-4" data-testid="go-purchase-button">
+            <CardContent className=\"py-16 text-center\">
+              <p className=\"text-gray-500 text-lg\">Henüz hesap satın almadınız.</p>
+              <Button onClick={() => navigate('/dashboard')} className=\"mt-4\">
                 Hesap Satın Al
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {accounts.map((account, index) => (
-              <Card key={account.id} className="hover:shadow-xl transition-shadow" data-testid={`account-card-${account.id}`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Hesap #{index + 1}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setDeleteAccountId(account.account_id)}
-                      data-testid={`delete-button-${account.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Building2 className="w-4 h-4" />
-                      <span>Kategori: Facebook</span>
+          <div className=\"space-y-6\">
+            {accounts.map((account, index) => {
+              const cookies = parseCookies(account.account_data.cookie_data);
+              const cookieArray = Array.isArray(cookies) ? cookies : (cookies.cookies || []);
+              const accountPassword = account.account_data.password || '';
+
+              return (
+                <Card key={account.id} className=\"overflow-hidden\" data-testid={`account-card-${account.id}`}>
+                  <CardHeader className=\"bg-gradient-to-r from-purple-600 to-blue-600 text-white\">
+                    <div className=\"flex justify-between items-center\">
+                      <div>
+                        <CardTitle className=\"text-2xl\">Hesap #{index + 1}</CardTitle>
+                        <p className=\"text-sm text-white/80 mt-1\">
+                          Fiyat: ₺{account.account_data.price_tl} • {new Date(account.purchase_date).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                      <div className=\"flex gap-2\">
+                        <Button
+                          onClick={() => copyAllCookies(account)}
+                          variant=\"outline\"
+                          size=\"sm\"
+                          className=\"border-white text-white hover:bg-white/20\"
+                        >
+                          <Copy className=\"w-4 h-4 mr-2\" />
+                          Tümünü Kopyala
+                        </Button>
+                        <Button
+                          onClick={() => downloadJSON(account)}
+                          variant=\"outline\"
+                          size=\"sm\"
+                          className=\"border-white text-white hover:bg-white/20\"
+                        >
+                          JSON İndir
+                        </Button>
+                        <Button
+                          onClick={() => setDeleteAccountId(account.account_id)}
+                          variant=\"outline\"
+                          size=\"sm\"
+                          className=\"border-red-300 text-white hover:bg-red-500\"
+                        >
+                          <Trash2 className=\"w-4 h-4\" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <DollarSign className="w-4 h-4" />
-                      <span>Fiyat: ₺{account.account_data.price_tl}</span>
-                    </div>
-                    {account.account_data.password && (
-                      <div className="bg-yellow-50 border border-yellow-200 p-2 rounded">
-                        <p className="text-xs font-semibold text-yellow-800">Şifre:</p>
-                        <p className="text-sm font-mono text-yellow-900">{account.account_data.password}</p>
+                  </CardHeader>
+                  
+                  <CardContent className=\"p-6\">
+                    {/* Password Section */}
+                    {accountPassword && (
+                      <div className=\"bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4\">
+                        <div className=\"flex justify-between items-center\">
+                          <div>
+                            <p className=\"text-xs font-semibold text-yellow-800 mb-1\">Facebook Hesap Şifresi:</p>
+                            <p className=\"text-lg font-mono text-yellow-900 font-bold\">
+                              {showPassword[account.id] ? accountPassword : '••••••••'}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => setShowPassword({...showPassword, [account.id]: !showPassword[account.id]})}
+                            variant=\"ghost\"
+                            size=\"sm\"
+                          >
+                            {showPassword[account.id] ? <EyeOff className=\"w-4 h-4\" /> : <Eye className=\"w-4 h-4\" />}
+                          </Button>
+                        </div>
                       </div>
                     )}
-                    <div className="text-xs text-gray-400">
-                      {new Date(account.purchase_date).toLocaleDateString('tr-TR')}
+
+                    {/* Cookies Table */}
+                    <div className=\"border rounded-lg overflow-hidden\">
+                      <div className=\"bg-gray-50 px-4 py-3 border-b\">
+                        <h3 className=\"font-semibold text-gray-800\">Cookie Listesi ({cookieArray.length} adet)</h3>
+                      </div>
+                      
+                      <div className=\"max-h-96 overflow-auto\">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className=\"w-12\">#</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Value</TableHead>
+                              <TableHead>Domain</TableHead>
+                              <TableHead>Path</TableHead>
+                              <TableHead className=\"w-20\">Secure</TableHead>
+                              <TableHead className=\"w-24\">İşlem</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {cookieArray.map((cookie, idx) => (
+                              <TableRow key={idx} className=\"hover:bg-gray-50\">
+                                <TableCell className=\"font-medium text-gray-500\">{idx + 1}</TableCell>
+                                <TableCell className=\"font-mono text-sm font-semibold\">{cookie.name}</TableCell>
+                                <TableCell className=\"font-mono text-xs text-gray-600 max-w-md truncate\" title={cookie.value}>
+                                  {cookie.value?.substring(0, 50)}{cookie.value?.length > 50 ? '...' : ''}
+                                </TableCell>
+                                <TableCell className=\"text-sm\">{cookie.domain}</TableCell>
+                                <TableCell className=\"text-sm\">{cookie.path}</TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded text-xs font-semibold ${cookie.secure ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                    {cookie.secure ? 'Yes' : 'No'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    onClick={() => copyCookie(cookie)}
+                                    variant=\"ghost\"
+                                    size=\"sm\"
+                                    className=\"h-8 px-2\"
+                                  >
+                                    <Copy className=\"w-3 h-3\" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <Button
-                    onClick={() => openAccountInNewWindow(account)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white mb-2"
-                    data-testid={`open-account-button-${account.id}`}
-                  >
-                    <ExternalLink className="mr-2 w-4 h-4" />
-                    Hesabı Tarayıcıda Aç
-                  </Button>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      onClick={() => downloadJSON(account)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                      data-testid={`download-json-${account.id}`}
-                    >
-                      📄 JSON İndir
-                    </Button>
-                    
-                    <Button
-                      onClick={() => downloadLauncher(account)}
-                      className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                      data-testid={`download-launcher-${account.id}`}
-                    >
-                      📥 BAT İndir
-                    </Button>
-                  </div>
-                  
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    JSON: Desktop programa • BAT: Otomatik launcher
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+
+                    {/* Quick Info */}
+                    <div className=\"mt-4 grid grid-cols-3 gap-4 text-center\">
+                      <div className=\"bg-blue-50 p-3 rounded-lg\">
+                        <p className=\"text-xs text-blue-600 font-semibold\">Toplam Cookie</p>
+                        <p className=\"text-2xl font-bold text-blue-800\">{cookieArray.length}</p>
+                      </div>
+                      <div className=\"bg-green-50 p-3 rounded-lg\">
+                        <p className=\"text-xs text-green-600 font-semibold\">Secure</p>
+                        <p className=\"text-2xl font-bold text-green-800\">
+                          {cookieArray.filter(c => c.secure).length}
+                        </p>
+                      </div>
+                      <div className=\"bg-purple-50 p-3 rounded-lg\">
+                        <p className=\"text-xs text-purple-600 font-semibold\">HttpOnly</p>
+                        <p className=\"text-2xl font-bold text-purple-800\">
+                          {cookieArray.filter(c => c.httpOnly).length}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* Delete Dialog */}
       <AlertDialog open={!!deleteAccountId} onOpenChange={() => setDeleteAccountId(null)}>
-        <AlertDialogContent data-testid="delete-confirmation-dialog">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hesabı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu işlem geri alınamaz. Hesabınız kalıcı olarak silinecektir ve geri getirilemez.
+              Bu işlem geri alınamaz. Hesabınız kalıcı olarak silinecektir.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="delete-cancel-button">İptal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              className="bg-red-500 hover:bg-red-600"
-              data-testid="delete-confirm-button"
-            >
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAccount} className=\"bg-red-500 hover:bg-red-600\">
               Evet, Sil
             </AlertDialogAction>
           </AlertDialogFooter>
