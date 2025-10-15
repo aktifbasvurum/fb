@@ -186,6 +186,22 @@ function AdminDashboard({ user, setUser }) {
       fetchData();
     } catch (error) {
       toast.error('Cüzdan adresi güncellenemedi!');
+
+  const handleUpdateTelegram = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API}/admin/settings/telegram?bot_token=${encodeURIComponent(telegramSettings.bot_token)}&chat_id=${encodeURIComponent(telegramSettings.chat_id)}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Telegram ayarlari guncellendi ve test mesaji gonderildi!');
+      setShowTelegramDialog(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Telegram guncellenemedi!');
+    }
+  };
+
     }
   };
 
