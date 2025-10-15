@@ -281,14 +281,61 @@ setTimeout(function(){goTo('https://www.facebook.com')},500);
               <ArrowLeft className="mr-2 w-4 h-4" />
               Geri
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-white" data-testid="my-accounts-heading">
                 Satın Aldığım Hesaplar
               </h1>
               <p className="text-white/80">{accounts.length} hesap</p>
             </div>
+            {extensionInstalled && (
+              <div className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold">
+                ✅ Extension Aktif
+              </div>
+            )}
           </div>
         </div>
+
+        {showExtensionInfo && !extensionInstalled && (
+          <Card className="mb-6 border-2 border-yellow-400 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-yellow-800">
+                <span className="text-2xl">⚡</span>
+                Otomatik Cookie Yükleme İçin Extension Yükleyin
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-4">
+                Cookie'lerin otomatik yüklenmesi için Chrome Extension'ı kurmanız gerekiyor. 
+                Kurulum sadece <strong>2 dakika</strong> sürer ve sonrasında tüm hesaplar tek tıkla açılır!
+              </p>
+              <div className="bg-white p-4 rounded-lg mb-4">
+                <h3 className="font-bold mb-2 text-gray-800">📥 Hızlı Kurulum:</h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                  <li>Extension'ı indirin (aşağıdaki buton)</li>
+                  <li>ZIP dosyasını çıkarın</li>
+                  <li>Chrome'da <code className="bg-gray-200 px-2 py-1 rounded">chrome://extensions/</code> açın</li>
+                  <li>"Geliştirici modu"nu aktif edin (sağ üst)</li>
+                  <li>"Paketten yükle" → Klasörü seçin</li>
+                  <li>Sayfayı yenileyin - Hazır! ✅</li>
+                </ol>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => window.open('/fb-cookie-loader-extension.zip', '_blank')}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  📥 Extension'ı İndir
+                </Button>
+                <Button
+                  onClick={() => setShowExtensionInfo(false)}
+                  variant="outline"
+                >
+                  Kapat
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {accounts.length === 0 ? (
           <Card>
