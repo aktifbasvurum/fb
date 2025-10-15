@@ -35,4 +35,7 @@ htmlcov/
 
 # Production
 *.zip
-*.exe
+*.exe-e 
+# Environment files
+*.env
+*.env.*
