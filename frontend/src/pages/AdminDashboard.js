@@ -476,26 +476,35 @@ function AdminDashboard({ user, setUser }) {
         setShowCategoryDialog(open);
         if (!open) {
           setEditingCategory(null);
-          setNewCategory('');
+          setNewCategory({ name: '', description: '' });
         }
       }}>
         <DialogContent data-testid="category-dialog">
           <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Kategori Düzenle' : 'Yeni Kategori Oluştur'}</DialogTitle>
+            <DialogTitle>{editingCategory ? 'Kategori Duzenle' : 'Yeni Kategori Olustur'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateCategory} className="space-y-4">
             <div>
-              <Label>Kategori Adı</Label>
+              <Label>Kategori Adi</Label>
               <Input
-                placeholder="Örn: Facebook, Google, Instagram"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Orn: Facebook, Google"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
                 required
-                data-testid="category-name-input"
               />
             </div>
-            <Button type="submit" className="w-full" data-testid="category-submit-button">
-              {editingCategory ? 'Güncelle' : 'Oluştur'}
+            <div>
+              <Label>Aciklama (Renkli Neon Gosterilecek)</Label>
+              <Textarea
+                placeholder="Orn: HIZLI TESLIMAT! GARANTILI HESAPLAR!"
+                value={newCategory.description}
+                onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                rows={3}
+              />
+              <p className="text-xs text-gray-500 mt-1">Bu metin kullanicilara renkli gradient kutuda gosterilir</p>
+            </div>
+            <Button type="submit" className="w-full">
+              {editingCategory ? 'Guncelle' : 'Olustur'}
             </Button>
           </form>
         </DialogContent>
