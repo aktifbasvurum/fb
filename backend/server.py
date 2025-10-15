@@ -181,6 +181,17 @@ async def get_usdt_to_tl_rate() -> float:
     except:
         return 34.5
 
+async def send_telegram_notification(message: str):
+    """Send notification to Telegram"""
+    if not telegram_bot or not TELEGRAM_CHAT_ID:
+        print(f"[TELEGRAM] {message}")
+        return
+    
+    try:
+        await telegram_bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
+    except Exception as e:
+        print(f"[TELEGRAM ERROR] {e}")
+
 async def log_activity(user_id: str, user_email: str, action: str, details: str):
     log = ActivityLog(
         user_id=user_id,
