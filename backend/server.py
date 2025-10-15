@@ -27,11 +27,10 @@ db = client[os.environ['DB_NAME']]
 # JWT Settings
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 security = HTTPBearer()
 
-# Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
@@ -42,7 +41,7 @@ class User(BaseModel):
     email: EmailStr
     password_hash: str
     balance_tl: float = 0.0
-    role: str = "user"  # user or admin
+    role: str = "user"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Category(BaseModel):
@@ -55,9 +54,9 @@ class Account(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     category_id: str
-    cookie_data: str  # JSON string of cookies
+    cookie_data: str
     price_tl: float
-    status: str = "available"  # available, sold
+    status: str = "available"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PurchasedAccount(BaseModel):
@@ -65,7 +64,7 @@ class PurchasedAccount(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     account_id: str
-    account_data: dict  # Full account info including cookies
+    account_data: dict
     purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PaymentRequest(BaseModel):
@@ -76,7 +75,7 @@ class PaymentRequest(BaseModel):
     amount_usdt: float
     amount_tl: float
     wallet_address: str
-    status: str = "pending"  # pending, approved, rejected
+    status: str = "pending"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     processed_at: Optional[datetime] = None
 
@@ -108,6 +107,12 @@ class AccountInput(BaseModel):
 class AdminLoginInput(BaseModel):
     username: str
     password: str
+
+class UpdateBalanceInput(BaseModel):
+    balance_tl: float
+
+class ResetPasswordInput(BaseModel):
+    new_password: str
 
 # ============= HELPER FUNCTIONS =============
 def hash_password(password: str) -> str:
@@ -150,24 +155,21 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
     return user
 
 async def get_usdt_to_tl_rate() -> float:
-    """Fetch real-time USDT to TL exchange rate"""
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get("https://api.exchangerate-api.com/v4/latest/USD")
             data = response.json()
-            return data['rates'].get('TRY', 34.5)  # Fallback to ~34.5 if API fails
+            return data['rates'].get('TRY', 34.5)
     except:
-        return 34.5  # Default fallback rate
+        return 34.5
 
 # ============= AUTH ROUTES =============
 @api_router.post("/auth/register")
 async def register(input: RegisterInput):
-    # Check if user exists
     existing = await db.users.find_one({"email": input.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create user
     user = User(
         email=input.email,
         password_hash=hash_password(input.password)
@@ -177,7 +179,6 @@ async def register(input: RegisterInput):
     doc['created_at'] = doc['created_at'].isoformat()
     await db.users.insert_one(doc)
     
-    # Create token
     token = create_token({"sub": user.id, "email": user.email, "role": user.role})
     
     return {
@@ -224,7 +225,6 @@ async def get_profile(user: User = Depends(get_current_user)):
 # ============= PAYMENT ROUTES =============
 @api_router.post("/payment/request")
 async def create_payment_request(input: PaymentRequestInput, user: User = Depends(get_current_user)):
-    # Get current USDT to TL rate
     rate = await get_usdt_to_tl_rate()
     amount_tl = input.amount_usdt * rate
     
@@ -249,7 +249,6 @@ async def get_my_payment_requests(user: User = Depends(get_current_user)):
 
 @api_router.get("/payment/wallet-address")
 async def get_wallet_address():
-    # Admin sets this in env or returns from settings collection
     wallet = await db.settings.find_one({"key": "admin_wallet_address"}, {"_id": 0})
     if wallet:
         return {"wallet_address": wallet.get('value', '')}
@@ -259,24 +258,23 @@ async def get_wallet_address():
 @api_router.get("/categories")
 async def get_categories():
     categories = await db.categories.find({}, {"_id": 0}).to_list(100)
-    # Add available account count for each category
     for cat in categories:
         count = await db.accounts.count_documents({"category_id": cat['id'], "status": "available"})
         cat['available_count'] = count
+        
+        # Get price from first available account
+        first_account = await db.accounts.find_one({"category_id": cat['id'], "status": "available"}, {"_id": 0})
+        cat['price_per_account'] = first_account['price_tl'] if first_account else 0
     return categories
 
 # ============= ACCOUNT ROUTES =============
 @api_router.get("/accounts/available/{category_id}")
 async def get_available_accounts(category_id: str):
-    # Get category
     category = await db.categories.find_one({"id": category_id}, {"_id": 0})
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    # Count available accounts
     count = await db.accounts.count_documents({"category_id": category_id, "status": "available"})
-    
-    # Get price (use first available account's price)
     account = await db.accounts.find_one({"category_id": category_id, "status": "available"}, {"_id": 0})
     price = account.get('price_tl', 0) if account else 0
     
@@ -289,7 +287,6 @@ async def get_available_accounts(category_id: str):
 
 @api_router.post("/accounts/purchase")
 async def purchase_accounts(input: PurchaseInput, user: User = Depends(get_current_user)):
-    # Get available accounts
     accounts = await db.accounts.find(
         {"category_id": input.category_id, "status": "available"},
         {"_id": 0}
@@ -298,29 +295,23 @@ async def purchase_accounts(input: PurchaseInput, user: User = Depends(get_curre
     if len(accounts) < input.quantity:
         raise HTTPException(status_code=400, detail=f"Only {len(accounts)} accounts available")
     
-    # Calculate total price
     total_price = sum(acc['price_tl'] for acc in accounts)
     
-    # Check user balance
     if user.balance_tl < total_price:
         raise HTTPException(status_code=400, detail="Insufficient balance")
     
-    # Deduct balance
     await db.users.update_one(
         {"id": user.id},
         {"$set": {"balance_tl": user.balance_tl - total_price}}
     )
     
-    # Mark accounts as sold and create purchased accounts
     purchased = []
     for account in accounts:
-        # Mark as sold
         await db.accounts.update_one(
             {"id": account['id']},
             {"$set": {"status": "sold"}}
         )
         
-        # Create purchased account
         purchased_account = PurchasedAccount(
             user_id=user.id,
             account_id=account['id'],
@@ -343,166 +334,14 @@ async def get_my_accounts(user: User = Depends(get_current_user)):
     accounts = await db.purchased_accounts.find({"user_id": user.id}, {"_id": 0}).to_list(1000)
     return accounts
 
-@api_router.get("/accounts/{account_id}/download-launcher")
-async def download_account_launcher(account_id: str, user: User = Depends(get_current_user)):
-    # Find purchased account
-    account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
-    
-    cookie_data = account['account_data']['cookie_data']
-    
-    # Generate unique profile name
-    profile_name = f"FB_Account_{account_id[:8]}"
-    
-    # Get backend URL
-    BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:3000')
-    
-    # Create batch script - NO TURKISH CHARACTERS, NO EMOJIS
-    batch_content = f"""@echo off
-title Facebook Account Launcher
-color 0A
-
-echo ==============================
-echo Facebook Account Launcher
-echo ==============================
-echo.
-echo Profile: {profile_name}
-echo.
-
-REM Check Python
-echo [1/5] Checking Python...
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo ERROR: Python not found!
-    echo.
-    echo Install Python: https://www.python.org/downloads/
-    echo Check "Add Python to PATH" during installation
-    echo.
-    pause
-    exit /b 1
-)
-echo    OK - Python found
-
-REM Check pip
-echo [2/5] Checking pip...
-python -m pip --version >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo ERROR: Pip not working!
-    echo.
-    pause
-    exit /b 1
-)
-echo    OK - Pip ready
-
-REM Install/Check selenium
-echo [3/5] Checking Selenium...
-python -c "import selenium" >nul 2>&1
-if errorlevel 1 (
-    echo    Installing Selenium (please wait)...
-    python -m pip install selenium --quiet
-    if errorlevel 1 (
-        echo.
-        echo ERROR: Cannot install Selenium!
-        echo.
-        echo Try manually: pip install selenium
-        echo.
-        pause
-        exit /b 1
-    )
-    echo    OK - Selenium installed
-) else (
-    echo    OK - Selenium ready
-)
-
-REM Check Chrome
-echo [4/5] Checking Chrome...
-reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo ERROR: Chrome not found!
-    echo.
-    echo Install Chrome: https://www.google.com/chrome/
-    echo.
-    pause
-    exit /b 1
-)
-echo    OK - Chrome found
-
-REM Download Python launcher
-echo [5/5] Checking launcher...
-set LAUNCHER_FILE=%~dp0fb_launcher.py
-if not exist "%LAUNCHER_FILE%" (
-    echo    Downloading launcher...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri '{BACKEND_URL}/fb_launcher.py' -OutFile '%LAUNCHER_FILE%' -UseBasicParsing" >nul 2>&1
-    if errorlevel 1 (
-        echo.
-        echo ERROR: Cannot download launcher!
-        echo.
-        echo Download manually: {BACKEND_URL}/fb_launcher.py
-        echo Save to: %LAUNCHER_FILE%
-        echo.
-        pause
-        exit /b 1
-    )
-    echo    OK - Launcher downloaded
-) else (
-    echo    OK - Launcher ready
-)
-
-echo.
-echo ==============================
-echo Starting Facebook...
-echo ==============================
-echo.
-
-REM Create temp cookies file
-set COOKIES_FILE=%TEMP%\\fb_cookies_{account_id}.json
-echo {cookie_data.replace('"', '""')} > "%COOKIES_FILE%"
-
-REM Run Python launcher
-python "%LAUNCHER_FILE%" "{profile_name}" "%COOKIES_FILE%"
-
-REM Store exit code
-set EXITCODE=%ERRORLEVEL%
-
-REM Cleanup
-if exist "%COOKIES_FILE%" del "%COOKIES_FILE%" >nul 2>&1
-
-if %EXITCODE% NEQ 0 (
-    echo.
-    echo ERROR: Process failed! Exit code: %EXITCODE%
-    echo.
-)
-
-echo.
-echo ==============================
-echo Done
-echo ==============================
-pause
-exit /b %EXITCODE%
-"""
-    
-    # Return as downloadable file
-    headers = {
-        'Content-Disposition': f'attachment; filename="Facebook_Account_{account_id[:8]}.bat"',
-        'Content-Type': 'application/x-bat'
-    }
-    
-    return Response(content=batch_content.encode('utf-8'), headers=headers)
-
 @api_router.get("/accounts/{account_id}/download-json")
 async def download_account_json(account_id: str, user: User = Depends(get_current_user)):
-    # Find purchased account
     account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
     cookie_data = account['account_data']['cookie_data']
     
-    # Create JSON for desktop app
     json_data = {
         "name": f"Facebook Account {account_id[:8]}",
         "email": user.email,
@@ -510,7 +349,6 @@ async def download_account_json(account_id: str, user: User = Depends(get_curren
         "cookies": json.loads(cookie_data) if isinstance(cookie_data, str) else cookie_data
     }
     
-    # Return as downloadable JSON file
     headers = {
         'Content-Disposition': f'attachment; filename="FB_Account_{account_id[:8]}.json"',
         'Content-Type': 'application/json'
@@ -520,12 +358,10 @@ async def download_account_json(account_id: str, user: User = Depends(get_curren
 
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, user: User = Depends(get_current_user)):
-    # Find purchased account
     account = await db.purchased_accounts.find_one({"account_id": account_id, "user_id": user.id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
-    # Delete from purchased accounts
     await db.purchased_accounts.delete_one({"account_id": account_id, "user_id": user.id})
     
     return {"message": "Account deleted permanently"}
@@ -539,7 +375,6 @@ async def admin_login(input: AdminLoginInput):
     if input.username != admin_username or input.password != admin_password:
         raise HTTPException(status_code=401, detail="Invalid admin credentials")
     
-    # Create admin user if not exists
     admin_user = await db.users.find_one({"email": "admin@platform.com"}, {"_id": 0})
     if not admin_user:
         admin = User(
@@ -567,7 +402,41 @@ async def admin_login(input: AdminLoginInput):
 @api_router.get("/admin/users")
 async def get_all_users(admin: User = Depends(get_current_admin)):
     users = await db.users.find({"role": "user"}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    
+    # Add purchase count for each user
+    for user in users:
+        purchase_count = await db.purchased_accounts.count_documents({"user_id": user['id']})
+        user['purchase_count'] = purchase_count
+    
     return users
+
+@api_router.put("/admin/users/{user_id}/balance")
+async def update_user_balance(user_id: str, input: UpdateBalanceInput, admin: User = Depends(get_current_admin)):
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"balance_tl": input.balance_tl}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Balance updated"}
+
+@api_router.put("/admin/users/{user_id}/password")
+async def reset_user_password(user_id: str, input: ResetPasswordInput, admin: User = Depends(get_current_admin)):
+    new_hash = hash_password(input.new_password)
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password_hash": new_hash}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Password reset"}
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, admin: User = Depends(get_current_admin)):
+    await db.users.delete_one({"id": user_id})
+    await db.purchased_accounts.delete_many({"user_id": user_id})
+    await db.payment_requests.delete_many({"user_id": user_id})
+    return {"message": "User deleted"}
 
 @api_router.get("/admin/payment-requests")
 async def get_payment_requests(status: Optional[str] = None, admin: User = Depends(get_current_admin)):
@@ -580,7 +449,6 @@ async def get_payment_requests(status: Optional[str] = None, admin: User = Depen
 
 @api_router.put("/admin/payment-requests/{request_id}/approve")
 async def approve_payment(request_id: str, admin: User = Depends(get_current_admin)):
-    # Find request
     request = await db.payment_requests.find_one({"id": request_id}, {"_id": 0})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -588,13 +456,11 @@ async def approve_payment(request_id: str, admin: User = Depends(get_current_adm
     if request['status'] != 'pending':
         raise HTTPException(status_code=400, detail="Request already processed")
     
-    # Update request status
     await db.payment_requests.update_one(
         {"id": request_id},
         {"$set": {"status": "approved", "processed_at": datetime.now(timezone.utc).isoformat()}}
     )
     
-    # Add balance to user
     await db.users.update_one(
         {"id": request['user_id']},
         {"$inc": {"balance_tl": request['amount_tl']}}
@@ -646,7 +512,6 @@ async def update_category(category_id: str, input: CategoryInput, admin: User = 
 @api_router.delete("/admin/categories/{category_id}")
 async def delete_category(category_id: str, admin: User = Depends(get_current_admin)):
     await db.categories.delete_one({"id": category_id})
-    # Also delete all accounts in this category
     await db.accounts.delete_many({"category_id": category_id})
     return {"message": "Category deleted"}
 
@@ -657,6 +522,12 @@ async def admin_get_accounts(category_id: Optional[str] = None, admin: User = De
         query['category_id'] = category_id
     
     accounts = await db.accounts.find(query, {"_id": 0}).to_list(1000)
+    
+    # Add category name
+    for acc in accounts:
+        cat = await db.categories.find_one({"id": acc['category_id']}, {"_id": 0})
+        acc['category_name'] = cat['name'] if cat else 'N/A'
+    
     return accounts
 
 @api_router.post("/admin/accounts")
@@ -670,6 +541,16 @@ async def create_account(input: AccountInput, admin: User = Depends(get_current_
     doc['created_at'] = doc['created_at'].isoformat()
     await db.accounts.insert_one(doc)
     return account
+
+@api_router.put("/admin/accounts/{account_id}")
+async def update_account_price(account_id: str, input: AccountInput, admin: User = Depends(get_current_admin)):
+    result = await db.accounts.update_one(
+        {"id": account_id},
+        {"$set": {"price_tl": input.price_tl}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"message": "Account updated"}
 
 @api_router.delete("/admin/accounts/{account_id}")
 async def admin_delete_account(account_id: str, admin: User = Depends(get_current_admin)):
@@ -693,15 +574,24 @@ async def get_admin_stats(admin: User = Depends(get_current_admin)):
     available_accounts = await db.accounts.count_documents({"status": "available"})
     sold_accounts = await db.accounts.count_documents({"status": "sold"})
     
+    # Calculate total revenue
+    sold_accs = await db.accounts.find({"status": "sold"}, {"_id": 0}).to_list(10000)
+    total_revenue = sum(acc.get('price_tl', 0) for acc in sold_accs)
+    
+    # Total balance in system
+    all_users = await db.users.find({"role": "user"}, {"_id": 0}).to_list(10000)
+    total_balance = sum(u.get('balance_tl', 0) for u in all_users)
+    
     return {
         "total_users": total_users,
         "pending_payments": pending_payments,
         "total_categories": total_categories,
         "available_accounts": available_accounts,
-        "sold_accounts": sold_accounts
+        "sold_accounts": sold_accounts,
+        "total_revenue": total_revenue,
+        "total_user_balance": total_balance
     }
 
-# Include router
 app.include_router(api_router)
 
 app.add_middleware(
