@@ -37,6 +37,55 @@ function MyAccounts({ user }) {
   const openAccountInNewWindow = (account) => {
     const cookieData = account.account_data.cookie_data;
     
+    // Create bookmarklet code
+    const createCookieScript = (cookies) => {
+      return `
+// Facebook Cookie Yükleyici
+(function() {
+  const cookies = ${cookies};
+  let cookieArray = [];
+  
+  // Parse cookies
+  try {
+    if (typeof cookies === 'string') {
+      cookieArray = JSON.parse(cookies);
+    } else if (Array.isArray(cookies)) {
+      cookieArray = cookies;
+    } else if (cookies.cookies && Array.isArray(cookies.cookies)) {
+      cookieArray = cookies.cookies;
+    }
+  } catch(e) {
+    console.error('Cookie parse hatası:', e);
+    alert('Cookie formatı hatalı!');
+    return;
+  }
+  
+  // Set cookies
+  let successCount = 0;
+  cookieArray.forEach(cookie => {
+    try {
+      let cookieString = cookie.name + '=' + cookie.value + ';';
+      if (cookie.domain) cookieString += 'domain=' + cookie.domain + ';';
+      if (cookie.path) cookieString += 'path=' + cookie.path + ';';
+      if (cookie.secure) cookieString += 'secure;';
+      if (cookie.sameSite) cookieString += 'SameSite=' + cookie.sameSite + ';';
+      
+      document.cookie = cookieString;
+      successCount++;
+    } catch(e) {
+      console.error('Cookie set hatası:', cookie.name, e);
+    }
+  });
+  
+  alert('✅ ' + successCount + ' cookie yüklendi! Sayfa yenileniyor...');
+  setTimeout(() => location.reload(), 500);
+})();
+`.trim();
+    };
+    
+    const consoleScript = createCookieScript(cookieData);
+    const bookmarkletCode = 'javascript:' + encodeURIComponent(createCookieScript(cookieData));
+    
     // Format cookie data for better display
     let formattedCookies = cookieData;
     try {
