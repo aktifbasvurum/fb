@@ -609,6 +609,46 @@ function AdminDashboard({ user, setUser }) {
           </form>
         </DialogContent>
       </Dialog>
+      </Dialog>
+
+      {/* Balance Edit Dialog */}
+      <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kullanici Bakiyesi Duzenle</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="text-sm text-gray-600">Kullanici: <span className="font-semibold">{editingUser.email}</span></p>
+                <p className="text-sm text-gray-600">Mevcut Bakiye: <span className="font-semibold">{editingUser.balance_tl.toFixed(2)} TL</span></p>
+              </div>
+              <div>
+                <Label>Yeni Bakiye (TL)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={balanceForm.balance_tl}
+                  onChange={(e) => setBalanceForm({ balance_tl: parseFloat(e.target.value) })}
+                  required
+                />
+              </div>
+              <Button onClick={async () => {
+                try {
+                  const token = localStorage.getItem('token');
+                  await axios.put(`${API}/admin/users/${editingUser.id}/balance`, balanceForm, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  toast.success('Bakiye guncellendi!');
+                  setShowBalanceDialog(false);
+                  fetchData();
+                } catch (error) {
+                  toast.error('Guncellenemedi!');
+                }
+              }} className="w-full">Kaydet</Button>
+            </div>
+          )}
+        </DialogContent>
     </div>
   );
 }
