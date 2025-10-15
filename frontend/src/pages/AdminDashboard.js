@@ -49,13 +49,14 @@ function AdminDashboard({ user, setUser }) {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [statsRes, usersRes, paymentsRes, categoriesRes, accountsRes, walletRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, categoriesRes, accountsRes, walletRes, telegramRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/users`, { headers }),
         axios.get(`${API}/admin/payment-requests`, { headers }),
         axios.get(`${API}/admin/categories`, { headers }),
         axios.get(`${API}/admin/accounts`, { headers }),
-        axios.get(`${API}/payment/wallet-address`, { headers })
+        axios.get(`${API}/payment/wallet-address`, { headers }),
+        axios.get(`${API}/admin/settings/telegram`, { headers }).catch(() => ({ data: { bot_token: '', chat_id: '' } }))
       ]);
 
       setStats(statsRes.data);
@@ -64,6 +65,7 @@ function AdminDashboard({ user, setUser }) {
       setCategories(categoriesRes.data);
       setAccounts(accountsRes.data);
       setWalletAddress(walletRes.data.wallet_address || '');
+      setTelegramSettings(telegramRes.data);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     }
