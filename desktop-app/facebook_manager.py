@@ -465,9 +465,100 @@ Cookie formatı: JSON array veya {"cookies": [...]}
             driver.refresh()
             time.sleep(2)
             
+            # Create shortcut buttons overlay
+            self.add_shortcut_toolbar(driver)
+            
         except Exception as e:
             driver.quit()
             raise e
+    
+    def add_shortcut_toolbar(self, driver):
+        """Add shortcut toolbar to browser"""
+        toolbar_script = \"\"\"
+        // Create toolbar
+        var toolbar = document.createElement('div');
+        toolbar.id = 'fb-shortcuts-toolbar';
+        toolbar.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 999999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-wrap: wrap;
+        `;
+        
+        var buttons = [
+            {text: 'Facebook Ana Sayfa', url: 'https://www.facebook.com'},
+            {text: 'Business Manager', url: 'https://business.facebook.com'},
+            {text: 'Ads Manager', url: 'https://adsmanager.facebook.com/adsmanager'},
+            {text: 'Reklam Olustur', url: 'https://www.facebook.com/ads/create'},
+            {text: 'Sayfa Yonetimi', url: 'https://www.facebook.com/pages'},
+            {text: 'Faturalandirma', url: 'https://www.facebook.com/settings?tab=payments'},
+            {text: 'Odeme Yontemleri', url: 'https://www.facebook.com/ads/manager/account_settings/account_billing/'},
+            {text: 'Hesap Ayarlari', url: 'https://www.facebook.com/settings'},
+            {text: 'Profil', url: 'https://www.facebook.com/me'},
+        ];
+        
+        buttons.forEach(function(btn) {
+            var button = document.createElement('button');
+            button.textContent = btn.text;
+            button.style.cssText = `
+                background: white;
+                color: #667eea;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 12px;
+                transition: all 0.2s;
+            `;
+            button.onmouseover = function() {
+                this.style.background = '#f3f4f6';
+                this.style.transform = 'translateY(-2px)';
+            };
+            button.onmouseout = function() {
+                this.style.background = 'white';
+                this.style.transform = 'translateY(0)';
+            };
+            button.onclick = function() {
+                window.location.href = btn.url;
+            };
+            toolbar.appendChild(button);
+        });
+        
+        // Add close button
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = 'X Kapat Toolbar';
+        closeBtn.style.cssText = `
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: auto;
+        `;
+        closeBtn.onclick = function() {
+            toolbar.remove();
+        };
+        toolbar.appendChild(closeBtn);
+        
+        document.body.insertBefore(toolbar, document.body.firstChild);
+        document.body.style.paddingTop = '60px';
+        \"\"\"
+        
+        try:
+            driver.execute_script(toolbar_script)
+        except:
+            pass  # If script injection fails, continue without toolbar
     
     def delete_account(self):
         """Delete selected account"""
