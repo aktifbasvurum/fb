@@ -543,6 +543,30 @@ async def update_wallet_address(wallet_address: str, admin: User = Depends(get_c
     await db.settings.update_one({"key": "admin_wallet_address"}, {"$set": {"value": wallet_address}}, upsert=True)
     return {"message": "Wallet updated"}
 
+@api_router.put("/admin/settings/telegram")
+async def update_telegram_settings(bot_token: str, chat_id: str, admin: User = Depends(get_current_admin)):
+    await db.settings.update_one({"key": "telegram_bot_token"}, {"$set": {"value": bot_token}}, upsert=True)
+    await db.settings.update_one({"key": "telegram_chat_id"}, {"$set": {"value": chat_id}}, upsert=True)
+    
+    # Test notification
+    try:
+        test_bot = Bot(token=bot_token)
+        await test_bot.send_message(chat_id=chat_id, text="✅ Telegram entegrasyonu basarili!")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Telegram baglanti hatasi: {str(e)}")
+    
+    return {"message": "Telegram settings updated"}
+
+@api_router.get("/admin/settings/telegram")
+async def get_telegram_settings(admin: User = Depends(get_current_admin)):
+    bot_token_doc = await db.settings.find_one({"key": "telegram_bot_token"}, {"_id": 0})
+    chat_id_doc = await db.settings.find_one({"key": "telegram_chat_id"}, {"_id": 0})
+    
+    return {
+        "bot_token": bot_token_doc.get('value', '') if bot_token_doc else '',
+        "chat_id": chat_id_doc.get('value', '') if chat_id_doc else ''
+    }
+
 @api_router.get("/admin/stats")
 async def get_admin_stats(admin: User = Depends(get_current_admin)):
     total_users = await db.users.count_documents({"role": "user"})
