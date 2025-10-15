@@ -289,7 +289,17 @@ async def get_categories():
         count = await db.accounts.count_documents({"category_id": cat['id'], "status": "available"})
         cat['available_count'] = count
         first_account = await db.accounts.find_one({"category_id": cat['id'], "status": "available"}, {"_id": 0})
-        cat['price_per_account'] = first_account['price_tl'] if first_account else 0
+        
+        if first_account:
+            # Calculate original price (current price is 80% of original)
+            discounted_price = first_account['price_tl']
+            original_price = discounted_price / 0.8  # 20% discount
+            cat['price_per_account'] = discounted_price
+            cat['original_price'] = original_price
+        else:
+            cat['price_per_account'] = 0
+            cat['original_price'] = 0
+    
     return categories
 
 # ============= ACCOUNT ROUTES =============
